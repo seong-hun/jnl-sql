@@ -1,0 +1,118 @@
+\documentclass[12pt,draftcls,onecolumn]{IEEEtran}
+
+
+%-------------------------------------------------------------------------------
+%		Packages
+%-------------------------------------------------------------------------------
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{textcomp}
+\usepackage{algorithmic}
+
+\usepackage{mathtools}
+\usepackage{physics}
+\usepackage{bbm}
+\usepackage{booktabs,multirow}
+\usepackage{siunitx}
+\sisetup{table-figures-exponent=1, table-sign-exponent=true}
+\sisetup{group-separator={,}}
+
+%-------------------------------------------------------------------------------
+%		Graphicsx
+%-------------------------------------------------------------------------------
+\usepackage{graphicx}
+\graphicspath{{src/}}
+
+%------------------------------------------------------------------------------
+%		AMS Theorems
+%------------------------------------------------------------------------------
+\usepackage{amsthm}
+\newtheorem{thm}{Theorem}
+\newtheorem{lem}{Lemma}
+\newtheorem{cor}{Corollary}
+\newtheorem{prop}{Proposition}
+
+\newtheorem{defi}{Definition}
+\newtheorem{prob}{Problem}
+\newtheorem{exam}{Example}
+\newtheorem{alg}{Algorithm}
+\newtheorem{ass}{Assumption}
+
+\newtheorem{remark}{Remark}
+\newtheorem{note}{Note}
+
+%------------------------------------------------------------------------------
+%		Macros
+%------------------------------------------------------------------------------
+\DeclarePairedDelimiterX{\inner}[2]{\langle}{\rangle}{#1, #2}
+
+%------------------------------------------------------------------------------
+%		Document
+%------------------------------------------------------------------------------
+\begin{document}
+
+\title{Note}
+\author{Seong-hun~Kim}
+
+\maketitle
+
+%==============================================================================
+\section{Introduction}
+%==============================================================================
+
+Consider the following nonlinear system.
+\begin{equation}
+	\label{eq:system}
+	\dot{x} = f(x) + g(x) u, \quad x(0) = x_0
+\end{equation}
+where
+$x \in \Omega \subset \mathbb{R}^n$ denotes the state vector,
+and
+$u \in \mathbb{R}^m$ denotes the control input vector.
+The functions
+$f \colon \Omega \to \mathbb{R}^n$
+and
+$g \colon \Omega \to \mathbb{R}^{n \times m}$
+are assumed to be Lipschitz continuous on a set $\Omega$
+which contains the origin as an interior point.
+
+Let the performance index of the control be defined by
+\begin{equation}
+	\label{eq:performance_index}
+	J(x, u) = \int_{0}^\infty r(\varphi(t; x, u), u(t)) \dd{t},
+\end{equation}
+where
+$r \colon \Omega \times \mathbb{R}^m \to \mathbb{R}$ denotes
+the local cost function defined as
+$r(x, u) = q(x) + u^T R u$,
+for a positive definite function
+$q \colon \Omega \to \mathbb{R}_+$,
+and a positive definite matrix $R \in \mathbb{S}_{++}$.
+
+\begin{defi}[Admissible Control~\cite{beard_galerkin_1997-1}]
+	Given the system in~\eqref{eq:system},
+	a control $u \colon \Omega \to \mathbb{R}^m$
+	is \textit{admissible}
+	with respect to the cost function $r$
+	in~\eqref{eq:performance_index},
+	written $u \in \mathcal{A}_r(\Omega)$,
+	if
+	$u \in C^1(\Omega)$ stabilizes the system on $\Omega$,
+	$u(0) = 0$,
+	and
+	$J(x_0; u) < \infty$ for all $x_0 \in \Omega$.
+\end{defi}
+
+For an admissible control $\mu \in \mathcal{A}_r(\Omega)$,
+the value function can be defined as
+\begin{equation}
+	\label{eq:value_function}
+	V(x; \mu) = J(x, \mu(\varphi(\cdot; x, \mu))).
+\end{equation}
+
+
+\bibliographystyle{IEEEtran}
+\bibliography{note}
+
+\end{document}
+
