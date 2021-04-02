@@ -111,8 +111,323 @@ the value function can be defined as
 \end{equation}
 
 
+%==============================================================================
+\section{$\mathcal{H}$-Modification}
+%==============================================================================
+
+Consider a set of systems
+\begin{align}
+	\dot{x}_p & = A_p x + B_p \pqty{u - {W^\circ}^T \phi_p(x_p)} + B_r c,
+	\\
+	\dot{x}_r & = A_r x_r + B_r c,
+	\\
+	u & = - Kx + u_a,
+\end{align}
+where $A_p - B K = A_r$.
+The error dynamics is given by
+\begin{align}
+	\dot{e} & = A_r e + B \pqty{u_a - {W^\circ}^T \phi(x)},
+	\\
+	\dot{x}_r & = A_r x_r + B_r c,
+\end{align}
+where $e = x_p - x_r$ and $x = {[e, x_r]}^T$.
+Let the performance index be
+\begin{equation}
+	{J^\ast(e)}
+	= \inf_{u_a(\cdot)} \int_{0}^\infty
+	\frac{1}{2} \pqty{{\xi(t; e, u_a)}^T Q \xi(t; e, u_a) + {u_a(t)}^T R u_a(t)}
+	\dd{t},
+\end{equation}
+HJB equation is
+\begin{equation}
+	\inf_{\mu}
+	\bqty{%
+		{\grad V^\ast(e)}^T \pqty{A_r e + B (\mu - {W^\circ}^T \phi(x))}
+		+ \frac{1}{2} e^T Q e + \frac{1}{2} \mu^T R \mu
+	} = 0.
+\end{equation}
+For $u_a(t) = \pi(e(t)) = {W^\circ}^T \phi(x(t))$,
+\begin{equation}
+	\label{eq:bellman}
+	{\grad V^\pi(e)}^T A_r e
+	+ \frac{1}{2} e^T Q e
+	+ \frac{1}{2} \phi^T W^\circ R {W^\circ}^T \phi
+	= 0
+\end{equation}
+Let
+\begin{equation}
+	V^\pi(e) = \frac{1}{2} e^T P e + \tilde{V}^\pi(e).
+\end{equation}
+From~\eqref{eq:bellman},
+\begin{equation}
+	\label{eq:tilde_V}
+	{\grad \tilde{V}^\pi(e)}^T A_r e
+	+ \frac{1}{2} \phi^T W^\circ R {W^\circ}^T \phi
+	= 0.
+\end{equation}
+Let a target policy be
+\begin{equation}
+	\pi^\prime(e) = W^T \phi.
+\end{equation}
+Then,
+\begin{equation}
+	\varepsilon(e, W)
+	=
+	\grad {V^\pi(e)}^T \pqty{A_r e + B (W^T \phi - {W^\circ}^T \phi)}
+	+ \frac{1}{2} e^T Q e
+	+ \frac{1}{2} \phi^T W R W^T \phi.
+\end{equation}
+The function $\varepsilon(e, W)$ is strictly convex on $W$,
+and the optimum point $W^\ast$ satisfies
+\begin{equation}
+	{W^\ast_\pi}^T \phi = - R^{-1}B^T \grad V^\pi(e),
+\end{equation}
+which implies
+that the corresponding target policy is optimal
+with respect to the value function $V^\pi$.
+Taking the gradient of $\varepsilon$,
+the adaptation law is given by
+\begin{align}
+	\dot{W}
+	& = - \gamma \grad_W{\varepsilon}
+	\\
+	& =
+	- \gamma \phi {\grad V^\pi(e)}^T B
+	- \gamma \phi \phi^T W R
+	\\
+	& =
+	- \gamma \phi e^T P B
+	- \gamma \phi {\grad \tilde{V}^\pi(e)}^T B
+	- \gamma \phi \phi^T W R
+	\\
+	& =
+	- \gamma \phi \phi^T \pqty{W - W^\ast_\pi} R
+\end{align}
+
+% Let the Lyapunov candidate function be
+% \begin{equation}
+% 	\mathcal{V}(e) = \frac{1}{2} e^T P e
+% 	+ \frac{1}{2} \trace(\tilde{W}^T \gamma^{-1} \tilde{W}).
+% \end{equation}
+% The time-derivative of $\mathcal{V}$ is
+% \begin{align}
+% 	\dot{\mathcal{V}}
+% 	& =
+% 	e^T P A_r e + e^T P B \tilde{W}^T \phi
+% 	+ \trace(\tilde{W}^T \gamma^{-1} \dot{\tilde{W}})
+% 	\\
+% 	& =
+% 	- \frac{1}{2} e^T Q e
+% 	- \phi^T W R \tilde{W}^T \phi
+% 	- {\grad \tilde{V}^\pi(e)}^T B \tilde{W}^T \phi
+% 	\\
+% 	& =
+% 	- \frac{1}{2} e^T Q e
+% 	- \phi^T \tilde{W} R \tilde{W}^T \phi
+% 	- \pqty{B^T {\grad \tilde{V}^\pi(e)} + R {W^\circ}^T \phi}^T \tilde{W}^T \phi
+% \end{align}
+
+Let the Lyapunov candidate function be
+\begin{equation}
+	\mathcal{V}(e, W)
+	= V^\pi(e) + \frac{1}{2} \trace(\tilde{W}^T \gamma^{-1} \tilde{W}),
+\end{equation}
+The time-derivative of $V^\pi$ is
+\begin{align}
+	\dot{V}^\pi
+	& =
+	{\grad V^\pi(e)}^T \pqty{A_r e + B \tilde{W}^T \phi}
+	\\
+	& =
+	e^T P A_r e + e^T P B \tilde{W}^T \phi
+	+ {\grad \tilde{V}^\pi(e)}^T \pqty{A_r e + B \tilde{W}^T \phi}
+	\\
+	& =
+	- \frac{1}{2} e^T Q e
+	+ {\grad \tilde{V}^\pi(e)}^T A_r e
+	+ \pqty{B^T P e + B^T \grad \tilde{V}^\pi(e)}^T \tilde{W}^T \phi
+\end{align}
+From~\eqref{eq:tilde_V},
+\begin{align}
+	\dot{\mathcal{V}}
+	& =
+	- \frac{1}{2} e^T Q e
+	- \frac{1}{2} \phi^T W^\circ R {W^\circ}^T \phi
+	+ {\grad V^\pi(e)}^T B R^{-1} R \tilde{W}^T \phi
+	+ \trace(\tilde{W}^T \gamma^{-1} \dot{\tilde{W}})
+	\\
+	& =
+	- \frac{1}{2} e^T Q e
+	- \frac{1}{2} \phi^T W^\circ R {W^\circ}^T \phi
+	- \phi^T W R \tilde{W}^T \phi
+	\\
+	& =
+	- \frac{1}{2} e^T Q e
+	- \frac{1}{2} \phi^T \tilde{W} R \tilde{W}^T \phi
+	- \frac{1}{2} \phi^T W R W^T \phi
+	% \\
+	% & =
+	% - \frac{1}{2} e^T Q e
+	% - \frac{1}{2} \phi^T W^\circ R {W^\circ}^T \phi
+	% - \phi^T W^\ast R \tilde{W}^T \phi
+	% \\
+	% & =
+	% - \frac{1}{2} e^T Q e
+	% - \frac{1}{2} \phi^T W^\circ R {W^\circ}^T \phi
+	% - \phi^T W^\ast R \pqty{W^\ast - W^\circ + W - W^\ast}^T \phi
+	% \\
+	% & =
+	% - \frac{1}{2} e^T Q e
+	% - \frac{1}{2} \phi^T W^\circ R {W^\circ}^T \phi
+	% - \frac{1}{2} \phi^T W^\ast R W^\ast \phi
+	% + \phi^T W^\ast R W^\circ \phi
+	% - \phi^T W^\ast R \pqty{W - W^\ast}^T \phi
+	% \\
+	% & =
+	% - \frac{1}{2} e^T Q e
+	% - \frac{1}{2} \phi^T W^\circ R {W^\circ}^T \phi
+	% - \frac{1}{2} \phi^T W^\ast R W^\ast \phi
+	% + \phi^T W^\ast R W^\circ \phi
+	% - \phi^T W^\ast R {{}\tilde{W}^\ast}^T \phi
+\end{align}
+where $\tilde{W}^\ast = W - W^\ast$.
+
+\subsection{Modification Approach}
+
+Consider a system
+\begin{align}
+	\label{eq:augmented_system}
+	\dot{e}
+	& = A_r e + B \pqty{W^T - {W^\circ}^T \phi},
+	\\
+	\dot{W}
+	& = - \gamma \phi e^T P B + U.
+\end{align}
+
+When the cost function is $l(x, W) = \frac{1}{2} e^T Q e$,
+and the control input $U = 0$,
+then the value function is given by
+\begin{equation}
+	V_0(e, W)
+	=
+	\frac{1}{2} e^T P e
+	+ \frac{1}{2} \trace(\tilde{W}^T \gamma^{-1} \tilde{W}).
+\end{equation}
+
+Now, we consider
+a quadratic cost function for both state and input as
+\begin{equation}
+	\label{eq:cost_function}
+	l(x, W) = \frac{1}{2} e^T Q e + \frac{1}{2} u^T R u,
+\end{equation}
+where $u = W^T \phi$.
+When  $U = 0$,
+the systems is the same as MRAC\@.
+We want to assess the value of the MRAC adaptation law.
+It is true that the policy $U = 0$ is a stable control input,
+but it is not admissible for the cost function~\eqref{eq:cost_function},
+because for the tracking problem,
+$u \neq 0$.
+However, we neglect this fact at this moment,
+and discuss later.
+Suppose that
+the control policy $U = 0$ has
+a relevant value function $V_0(e, W)$.
+The value function is
+\begin{equation}
+	V_0(e, W)
+	= 
+	\frac{1}{2} e^T P e
+	+ \frac{1}{2} \trace(\tilde{W}^T \gamma^{-1} \tilde{W})
+	+ \tilde{V}_0(e, W),
+\end{equation}
+where $\tilde{V}_0$ satisfies
+\begin{equation}
+	\grad_e \tilde{V}_0^T \pqty{A_r e + B \tilde{W}^T \phi}
+	+ \grad_W \tilde{V}_0^T \pqty{-\gamma \phi e^T P B}
+	+ \frac{1}{2} \phi^T W R W^T \phi
+	= 0,
+\end{equation}
+for all $(e, W)$.
+Note that, following $U = 0$,
+\begin{align}
+	\dot{\tilde{V}}_0(e, W)
+	& =
+	\grad_e \tilde{V}_0^T \pqty{A_r e + B \tilde{W}^T \phi}
+	+ \grad_W \tilde{V}_0^T \pqty{-\gamma \phi e^T P B}
+	\\
+	& = 
+	- \frac{1}{2} \phi^T W R W^T \phi
+	\le
+	0.
+\end{align}
+Since $\tilde{V}_0(e(\infty), W(\infty)) = 0$,
+we have
+$\tilde{V}_0(e(t), W(t)) \ge 0$ for all $t$.
+
+\subsection{Estimation of $W^\circ$ using IRL}
+
+Consider a policy $U = 0$ in~\eqref{eq:augmented_system},
+and $R = 0$ in~\eqref{eq:cost_function}.
+In this case,
+the value function is given by
+\begin{equation}
+	V_0(e, W)
+	=
+	\frac{1}{2} e^T P e
+	+ \frac{1}{2} \trace\pqty{\tilde{W}^T \gamma^{-1} \tilde{W}},
+\end{equation}
+where $\tilde{W} = W - W^\circ$.
+Hence, let us parameterize the value function by
+\begin{equation}
+	\hat{V}_0(e, W; \hat{W})
+	=
+	\frac{1}{2} e^T P e
+	+ \frac{1}{2} \trace\pqty{{(W - \hat{W})}^T \gamma^{-1} (W - \hat{W})},
+\end{equation}
+which approximates $V_0(e, W)$.
+The corresponding Bellman equation is
+\begin{equation}
+	\dot{V}_0(e, W) + \frac{1}{2} e^T Q e = 0.
+\end{equation}
+Using IRL formulation,
+we have
+\begin{equation}
+	V_0(e(t), W(t)) - V_0(e(t-T), W(t-T))
+	= - \int_{t-T}^t \frac{1}{2} {e(\tau)}^T Q e(\tau) \dd{\tau}.
+\end{equation}
+
+Loss is defined as
+\begin{align}
+	L(t; \hat{W})
+	& =
+	\hat{V}_0(e(t), W(t); \hat{W}) - \hat{V}_0(e(t-T), W(t-T); \hat{W})
+	\nonumber
+	\\
+	& \qquad
+	+ \int_{t-T}^t \frac{1}{2} {e(\tau)}^T Q e(\tau) \dd{\tau}.
+\end{align}
+Then, we can update $\hat{W}$ using
+a mean square loss and the gradient descent method as
+\begin{equation}
+	\hat{W}^\prime
+	=
+	\hat{W}
+	- \eta \frac{1}{N}
+	\sum_{i=1}^N L(e(t_i); \hat{W}) \grad_{\hat{W}} L(e(t_i); \hat{W}),
+\end{equation}
+where $\eta$ is the learning rate,
+and $N$ is the size of the minibatch.
+
+
+\section{Structured Q-Learning}
+
+Let us consider the following linear system.
+\begin{equation}
+	\dot{x} = A x + B u
+\end{equation}
+
 \bibliographystyle{IEEEtran}
 \bibliography{note}
 
 \end{document}
-

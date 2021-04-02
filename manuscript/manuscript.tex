@@ -1,0 +1,580 @@
+\documentclass[12pt,draftcls,onecolumn]{IEEEtran}
+
+%-------------------------------------------------------------------------------
+%		Packages
+%-------------------------------------------------------------------------------
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{textcomp}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+\usepackage{mathtools}
+\usepackage{physics}
+\usepackage{bbm}
+\usepackage{booktabs,multirow}
+\usepackage{siunitx}
+\sisetup{table-figures-exponent=1, table-sign-exponent=true}
+\sisetup{group-separator={,}}
+
+%-------------------------------------------------------------------------------
+%		Graphicsx
+%-------------------------------------------------------------------------------
+\usepackage{graphicx}
+\usepackage[caption=false, font=footnotesize]{subfig}
+\graphicspath{{src/}}
+
+%------------------------------------------------------------------------------
+%		AMS Theorems
+%------------------------------------------------------------------------------
+\usepackage{amsthm}
+\newtheorem{thm}{Theorem}
+\newtheorem{lem}{Lemma}
+\newtheorem{cor}{Corollary}
+\newtheorem{prop}{Proposition}
+
+\newtheorem{defi}{Definition}
+\newtheorem{prob}{Problem}
+\newtheorem{exam}{Example}
+\newtheorem{alg}{Algorithm}
+\newtheorem{ass}{Assumption}
+
+\newtheorem{remark}{Remark}
+\newtheorem{note}{Note}
+
+%------------------------------------------------------------------------------
+%		Macros
+%------------------------------------------------------------------------------
+\DeclarePairedDelimiterX{\inner}[2]{\langle}{\rangle}{#1, #2}
+
+%------------------------------------------------------------------------------
+%		Document
+%------------------------------------------------------------------------------
+\begin{document}
+
+\title{Research Note}
+\author{Seong-hun~Kim}
+\date{\today}
+
+\maketitle
+
+%==============================================================================
+\section{Introduction}
+%==============================================================================
+
+Consider a class of linear systems as follows.
+\begin{equation}
+  \label{eq:system}
+  \dot{x} = A x + B u,\; x(0) = x_0
+\end{equation}
+Suppose that
+the system $(A, B)$ is controllable.
+The performance index
+for the Linear-Quadratic-Regulator (LQR) problem
+is given by
+\begin{equation}
+  J(x_0; u(\cdot)) = \int_0^\infty \frac{1}{2} \pqty{x^T Q x + u^T R u} \dd{t},
+\end{equation}
+where
+$(\sqrt{Q}, A)$ is detectable,
+and the matrix $R$ is positive definite.
+
+The purpose of this study is
+to find the optimal gain $K^\ast$ for the LQR problem,
+using an arbitrary exploration data
+which is a set of a tuple $(x, u, \dot{x})$.
+The exploration data can either be obtained
+from a single trajectory controlled by a human expert,
+or even collected from literally any data point $(x, u, \dot{x})$
+that satisfies the relation in~\eqref{eq:system}.
+
+An algorithm is \textit{off-policy}
+if it learns the optimal policy
+from this kind of exploration data.
+Several off-policy algorithms have been proposed
+to obtain $K^\ast$ for linear systems
+\cite{%
+yu_jiang_robust_2014,
+jiang_global_2015,
+jae_young_lee_integral_2015,
+vamvoudakis_q-learning_2017
+}.
+Most of these algorithms are based
+on a Kleinman algorithm~\cite{kleinman_iterative_1968},
+which requires an initial stabilizing policy
+as follows.
+
+\begin{thm}[Kleinman~\cite{kleinman_iterative_1968}]
+  Let $K_0$ be
+  any stabilizing feedback gain matrix,
+  and let $P_k$ be
+  the symmetric positive definite solution
+  of the Lyapunov equation given by
+  \begin{equation}
+    P_k (A - B K_k) + (A - B K_k)^T P_k + Q + K_k^T R K_k = 0,
+  \end{equation}
+  where $K_k$ is defined recursively by
+  \begin{equation}
+    K_k = R^{-1} B^T P_{k-1}.
+  \end{equation}
+  Then, the following properties hold.
+  \begin{enumerate}
+    \item $A - B K_k$ is Hurwitz,
+    \item $P^\ast \le P_{k+1} \le P_k$,
+    \item $\lim_{k\to\infty} = K^\ast$,
+      and $\lim_{k\to\infty} = P^\ast$.
+  \end{enumerate}
+\end{thm}
+
+Online learning methods
+which adapt the gain
+using the Hamilton-Jacobi-Bellman (HJB) error have been proposed
+to relax the requirement
+for the initial stabilizing policy~\cite{vamvoudakis_online_2010}.
+However,
+these methods only guarantee
+the UUB for gain errors,
+and the ultimate bound is too large
+to claim that
+the gain converges to the optimal gain.
+
+%==============================================================================
+\section{Problem Formulation}
+%==============================================================================
+
+Let us consider the following linear system.
+\begin{equation}
+	\dot{x}(t) = A x(t) + B u(t), \; x(0) = x_0,
+\end{equation}
+where
+$x \in \mathbb{R}^n$ is the state vector,
+and
+$u \in \mathbb{R}^m$ is the input vector.
+The matrices $A$ and $B$
+with proper dimensions
+are unknowns. 
+
+The Linear Quadratic Regulator (LQR) finds
+a controller $u$
+that minimizes the following cost functional.
+\begin{equation}
+	J(x(0); u(\cdot))
+	= \int_0^\infty
+	\frac{1}{2} \pqty{{x(\tau)}^T Q x(\tau) + {u(\tau)}^T R u(\tau)} \dd{\tau},
+\end{equation}
+where
+$Q \in \mathbb{S}_+^n$
+and
+$R \in \mathbb{S}_{++}^m$ are fixed matrices.
+Assume that
+$\pqty{A, B}$ is controllable,
+and $\pqty{\sqrt{Q}, A}$ is detectable.
+It is well known that
+the optimal controller has
+a linear feedback form as
+$u^\ast(t) = - K x(t)$
+with the optimal gain $K = R^{-1} B^T P$,
+where
+$P \in \mathbb{S}_{++}^n$
+is the solution
+to the following algebraic Riccati equation.
+\begin{equation}
+  \label{eq:are}
+	P A + A^T P + Q - P B R^{-1} B^T P = 0.
+\end{equation}
+
+For the optimal gain $K$,
+consider the following
+control dynamics-augmented system.
+\begin{align}
+	\label{eq:augmented_system}
+	\dot{x} & = A x + B u,
+	\\
+	\dot{u} & = F u + F K x - K \pqty{Ax + Bu},
+\end{align}
+where
+the matrix $F \in \mathbb{R}^m$ is Hurwitz.
+
+\begin{lem}
+	For the augmented system~\eqref{eq:augmented_system},
+	the value function is given by
+	\begin{equation}
+		\mathcal{Q}(x, u)
+		= \frac{1}{2} x^T P x + \frac{1}{2} {(u + Kx)}^T G (u + Kx)
+	\end{equation}
+\end{lem}
+
+%==============================
+\section{Structured Q-Learning}
+%==============================
+
+Given a gain matrix $K$,
+consider the following
+control-dynamics-augmented system.
+\begin{align}
+  \dot{x} & = A x + B u, \\
+  \dot{u} & = F (u + K x) - K \pqty{A x + B u},
+\end{align}
+where $F$ is Hurwitz.
+This system is a virtual system
+that has no effect
+to the original system in~\eqref{eq:system}.
+Only the learning algorithm exploits this system.
+
+Let $\mathcal{Q}(x, u; K)$ denote
+the value function (Q-function)
+for the augmented system
+corresponding to the gain $K$,
+which satisfies the following Bellman equation.
+\begin{equation}
+  \label{eq:Bellman_equation}
+  {\grad_x \mathcal{Q}(x, u)}^T \dot{x}
+  + {\grad_u \mathcal{Q}(x, u)}^T \dot{u}
+  + \frac{1}{2} \pqty{x^T Q x + u^T R u} 
+  = 0.
+\end{equation}
+If 
+$\mathcal{Q}_k(x, u) \coloneqq \mathcal{Q}(x, u; K_k)$,
+the Q-function for the gain $K_k$,
+is structured as
+\begin{equation}
+  \mathcal{Q}_k(x, u)
+  =
+  \frac{1}{2}
+  \bmqty{x^T & u^T}
+  \bmqty{P_k^\prime & W_k^T \\ W_k & G_k}
+  \bmqty{x \\ u}
+  \eqqcolon
+  \frac{1}{2} z^T H_k z,
+\end{equation}
+where $z = [x^T, u^T]^T$,
+the Bellman equation
+in~\eqref{eq:Bellman_equation}
+can be written as follows.
+\begin{equation}
+  \label{eq:evaluation}
+  z^T H_k \bmqty{\dot{x} \\ F (u + K_k x) - K_k \dot{x}}
+  + \frac{1}{2} \pqty{x^T Q x + u^T R u} 
+  = 0.
+\end{equation}
+The variables
+$x$, $u$, $z$, $\dot{x}$, $F$, $K_k$, $Q$, and $R$
+are known,
+the solution $H_k$ can be found if it exists.
+Algorithm~\ref{alg:structured_q_learning}
+recursively solves for $H_k$
+and updates $K_k$
+which is hopefully guaranteed
+to converge to the optimal gain $K^\ast$
+without any knowledge of the system
+and the initial stabilizing policy.
+
+\begin{algorithm}
+  \caption{Structured Q-Learning}
+  \label{alg:structured_q_learning}
+  \begin{algorithmic}
+    \State Initialize the gain matrix $K_0$.
+    \State $k = 0$
+    \Repeat
+    \State Find the symmetric matrix $H_k$
+    using~\eqref{eq:evaluation}.
+    \Comment{Policy Evaluation}
+    \State Policy update: $K_{k+1} = {(H_k)}_{22}^{-1} {(H_k)}_{21}$.
+    \Comment{Policy Improvement}
+    \State $k \gets k + 1$
+    \Until{forever}
+  \end{algorithmic}
+\end{algorithm}
+
+Figure~\ref{fig:comparison:a}
+compares
+the existing method
+(Z. P. Jiang~\cite{jiang_global_2015})
+based on Kleinman algorithm
+and the proposed method
+for the initial stable policy,
+while
+Fig.~\ref{fig:comparison:b}
+shows the same comparison
+for the initial unstable policy.
+The data is collected
+from a single trajectory
+with arbitrarily oscillating control inputs.
+It can be seen that
+the two methods have same convergence
+when the initial policy is stable.
+However,
+for the unstable initial policy,
+the only proposed method
+converges to the optimal.
+
+\begin{figure}[!t]
+  \label{fig:comparison}
+	\centering
+  \subfloat[Stable initial policy\label{fig:comparison:a}]{%
+	\includegraphics[width=0.48\linewidth]{figure_1.pdf}}
+	\hfill
+  \subfloat[Unstable initial policy\label{fig:comparison:b}]{%
+	\includegraphics[width=0.48\linewidth]{figure_2.pdf}}
+	\caption{State, input, and parameter convergence histories.}
+\end{figure}
+
+%=============================
+\section{Convergence Analysis}
+%=============================
+
+The control gain is updated
+using the previous Q-function parameters as
+\begin{equation}
+  \label{eq:update_law}
+  K_{k+1} = {(H_k)}_{22}^{-1} {(H_k)}_{21}
+\end{equation}
+The evaluation step~\eqref{eq:evaluation} calculates
+the Q-function,
+which can be represented as
+the following matrix equation.
+\begin{equation}
+	\label{eq:ith_HJB_equation}
+	H_k {A_k} + {A_k}^T H_k + Q^\prime = 0,
+\end{equation}
+where
+\begin{equation}
+	H_k = \bmqty{P_k^{\prime} & W_k^T \\ W_k & G_k}
+  \eqqcolon
+  \bmqty{(H_k)_{11} & (H_k)_{21}^T \\ (H_k)_{21} & (H_k)_{22}},
+  \quad
+  Q^\prime \coloneqq \bmqty{Q & 0 \\ 0 & R},
+\end{equation}
+and
+\begin{equation}
+  A_k
+  \coloneqq
+  \bmqty{A & B \\ F K_k - K_k A & F - K_k B}.
+\end{equation}
+
+To simplify the analysis,
+the matrix equation~\eqref{eq:ith_HJB_equation} is transformed
+using the following decompositions:
+\begin{equation}
+  \label{eq:Aiprime_def}
+  A_k
+  =
+  \bmqty{I & 0 \\ - K_k & I}
+  \bmqty{A - B K_k & B \\ 0 & F}
+  \bmqty{I & 0 \\ K_k & I},
+\end{equation}
+and
+\begin{equation}
+	\label{eq:Hi_def}
+	H_k
+	=
+  \bmqty{I & W_k^T {G_k}^{-1} \\ 0 & I} 
+	\bmqty{P_k & 0 \\ 0 & G_k}
+  \bmqty{I & 0 \\ {G_k}^{-1} W_k & I}
+	=
+	\bmqty{I & K_{k+1}^T \\ 0 & I} 
+	\bmqty{P_k & 0 \\ 0 & G_k}
+	\bmqty{I & 0 \\ K_{k+1} & I},
+\end{equation}
+where $P_k \coloneqq P_k^\prime - W_k^T G_k^{-1} W_k$,
+from Schur's decomposition.
+By substituting $A_k^\prime$ in~\eqref{eq:Aiprime_def}
+and $H_k^\prime$ in~\eqref{eq:Hi_def}
+into~\eqref{eq:ith_HJB_equation},
+we get
+\begin{equation}
+  \label{eq:rearranged_iteration}
+  \tilde{H}_k
+	\bmqty{A - B K_k & B \\ 0 & F}
+	+
+	\bmqty{\pqty{A - B K_k}^T & 0 \\ B^T & F^T}
+  \tilde{H}_k
+  +
+	\bmqty{I & -K_{k}^T \\ 0 & I}
+	Q^\prime
+	\bmqty{I & 0 \\ -K_k & I}
+  = 0
+\end{equation}
+where $\tilde{K}_i = K_{k+1} - K_k$,
+and
+\begin{align}
+  \label{eq:Htilde_def}
+  \tilde{H}_k
+  & =
+  \bmqty{I & \tilde{K}_{k}^T \\ 0 & I}
+  \bmqty{P_k & 0 \\ 0 & G_k}
+  \bmqty{I & 0 \\ \tilde{K}_{k} & I}
+  =
+  \bmqty{%
+    P_k + \tilde{K}_k^T G_k \tilde{K}_k & \tilde{K}_k^T G_k
+    \\
+    G_k \tilde{K}_k & G_k
+  }
+  \\
+  & \eqqcolon
+  \bmqty{%
+    (\tilde{H}_k)_{11} & (\tilde{H}_k)_{21}^T
+    \\
+    (\tilde{H}_k)_{21} & (\tilde{H}_k)_{22}
+  }.
+\end{align}
+Then,
+the update law~\eqref{eq:update_law} can be rewritten as
+\begin{equation}
+  K_{k+1} = K_k + {(\tilde{H}_k)}_{22}^{-1} {(\tilde{H}_k)}_{21}.
+\end{equation}
+
+\begin{figure}[!t]
+  \label{fig:comparison2}
+  \centering
+  \subfloat[Stable initial policy\label{fig:comparison2:a}]{%
+  \includegraphics[width=0.48\linewidth]{figure_3.pdf}}
+  \hfill
+  \subfloat[Unstable initial policy\label{fig:comparison2:b}]{%
+  \includegraphics[width=0.48\linewidth]{figure_4.pdf}}
+  \caption{Parameter convergence histories.}
+\end{figure}
+
+Rewrite the equation in~\eqref{eq:rearranged_iteration}
+using each block matrix of $\tilde{H}_k$ as
+\begin{gather}
+  \label{eq:block_1}
+  (\tilde{H}_k)_{11} (A - B K_k)
+  + (A - B K_k)^T (\tilde{H}_k)_{11}
+  + Q + K_k^T R K_k = 0,
+  \\
+  \label{eq:block_2}
+  (\tilde{H}_k)_{21} (A - B K_k) + B^T (\tilde{H}_k)_{11}
+  + F^T (\tilde{H}_k)_{21} - R K_k = 0,
+  \\
+  \label{eq:block_3}
+  (\tilde{H}_k)_{21} B + (\tilde{H}_k)_{22} F
+  + F^T (\tilde{H}_k)_{22} + B^T (\tilde{H}_k)_{21}^T + R = 0.
+\end{gather}
+Multiply
+$(\tilde{H}_k)_{21}^T (\tilde{H}_k)_{22}^{-1}$
+on the left hand side of~\eqref{eq:block_2} and~\eqref{eq:block_3},
+and
+multiply
+$(\tilde{H}_k)_{22}^{-1} (\tilde{H}_k)_{21}$
+on the right hand side of~\eqref{eq:block_3}.
+Then,
+by substituting both equations into~\eqref{eq:block_1},
+we have
+\begin{equation}
+  \label{eq:H11_k+1}
+  \mathcal{P}(\tilde{H}_k) (A - B K_{k+1})
+  + (A - B K_{k+1})^T \mathcal{P}(\tilde{H}_k) 
+  + Q + K_{k+1}^T R K_{k+1} = 0,
+\end{equation}
+where
+$\mathcal{P}(\tilde{H}_k)
+\coloneqq
+(\tilde{H}_k)_{11}
+- (\tilde{H}_k)_{21}^T (\tilde{H}_k)_{22}^{-1} (\tilde{H}_k)_{21}
+$.
+It can be observed
+that $\mathcal{P}(\tilde{H}_k) = (\tilde{H}_{k+1})_{11} = P_k$
+from~\eqref{eq:Htilde_def} and~\eqref{eq:block_1}.
+
+\begin{thm}
+  Suppose that
+  $(\sqrt{Q}, A)$ is observable, $Q \succeq 0$, and $R \succ 0$.
+  Let $H_k$, $k=0,1,\dotsc$, be
+  the solution to the Lyapunov equation~\eqref{eq:ith_HJB_equation}
+  where $K_0$ is chosen such that the matrix $A - BK_0$ is Hurwitz.
+  Then,
+  $P_k = (H_k)_{11} - (H_k)_{21}^T (H_k)_{22}^{-1} (H_k)_{21}^T$
+  satisfies
+  \begin{enumerate}
+    \item $\cdots \succeq P_k \succeq P_{k+1} \succeq \cdots \succ 0$
+    \item $\lim_{k\to\infty} P_k = P^\ast$
+      and $\lim_{k\to\infty} K_k = K^\ast$,
+      where $P^\ast$ is the maximal solution of~\eqref{eq:are},
+      and $K^\ast = R^{-1} B^T P^\ast$ is the stable optimal gain.
+  \end{enumerate}
+\end{thm}
+
+\begin{proof}
+  1) Let $K_k$ stabilize the system $(A, B)$.
+  Since $F$ is Hurwitz,
+  the augmented matrix
+  \begin{equation}
+    \tilde{A}_k \coloneqq \bmqty{A - B K_k & B \\ 0 & F}
+  \end{equation}
+  is also Hurwitz.
+  From the fact that
+  $X \succeq 0$ is equivalent to $S^T X S \succeq 0$
+  for any non-singular matrix $S$,
+  we have
+  \begin{equation}
+    \tilde{Q}_k
+    \coloneqq
+    \bmqty{I & -K_{k}^T \\ 0 & I}
+    \bmqty{Q & 0 \\ 0 & R}
+    \bmqty{I & 0 \\ -K_k & I}
+    \succeq 0.
+  \end{equation}
+  Then,
+  there exists a unique nonnegative solution $\tilde{H}_k$
+  to~\eqref{eq:rearranged_iteration}
+  \cite[Theorem 2.2]{snyders_nonnegative_1970}.
+  Moreover,
+  because the pair $(\tilde{Q}_k, \tilde{A}_k)$ is observable,
+  the solution $\tilde{H}_k$ is positive definite.
+  From the definition of $\tilde{H}_k$ in~\eqref{eq:Htilde_def},
+  $(\tilde{H}_k)_{11}
+  - (\tilde{H}_k)_{21}^T (\tilde{H}_k)_{22}^{-1} (\tilde{H}_k)_{21}
+  = P_k
+  \succ0$
+  and
+  $(\tilde{H}_k)_{22} = G_k \succ 0$.
+  From~\eqref{eq:H11_k+1},
+  $(\tilde{H}_{k+1})_{11}$ and $(\tilde{H}_{k})_{11}$ have
+  the following relation.
+  \begin{equation}
+    \label{eq:H11_relation}
+    (\tilde{H}_{k+1})_{11}
+    =
+    (\tilde{H}_k)_{11}
+    - (\tilde{H}_k)_{21}^T (\tilde{H}_k)_{22}^{-1} (\tilde{H}_k)_{21}
+    \succ 0,
+  \end{equation}
+  which implies that
+  $(\tilde{H}_k)_{11} \succeq (\tilde{H}_{k+1})_{11} = P_k \succ 0$.
+  Since
+  $\tilde{H}_{k+1} \succ 0$,
+  $\tilde{Q}_{k+1} \succeq 0$
+  and $(\tilde{Q}_{k+1}, \tilde{A}_{k+1})$ is observable,
+  from Lasalle's theorem,
+  the matrix $\tilde{A}_{k+1}$ is Hurwitz,
+  which implies that the gain $K_{k+1}$ is stabilizing.
+  By induction, we can complete the proof.
+
+  2) There exists $\lim_{k\to\infty} P_k = P_\infty$
+  and also $\lim_{k\to\infty} (\tilde{H}_k)_{11} = (\tilde{H}_\infty)_{11}$
+  from the monotonic convergence of positive operators%
+  ~\cite{riesz_functional_1990}.
+  By taking the limit $k\to\infty$ of~\eqref{eq:H11_relation},
+  we have $(\tilde{H}_\infty)_{21} = 0$
+  since $(\tilde{H}_\infty)_{22} \succ 0$,
+  which implies
+  $K_k = R^{-1} B^T (\tilde{H}_\infty)_{11}$
+  from~\eqref{eq:block_2}.
+  Then,
+  the limit of \eqref{eq:block_1}
+  turns out to be the algebraic Riccati equation
+  \begin{equation}
+    (\tilde{H}_\infty)_{11} A
+    + A^T (\tilde{H}_\infty)_{11}
+    + Q - (\tilde{H}_\infty)_{11} B R^{-1} B^T (\tilde{H}_\infty)_{11} = 0,
+  \end{equation}
+  where $A - B R^{-1} B (\tilde{H}_\infty)_{11}$ is Hurwitz,
+  which possess the unique positive-definite solution $P^\ast$.
+\end{proof}
+
+
+\bibliographystyle{IEEEtran}
+\bibliography{manuscript}
+
+\end{document}
