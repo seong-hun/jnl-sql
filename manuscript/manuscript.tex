@@ -339,6 +339,7 @@ the following matrix equation.
 \end{equation}
 where
 \begin{equation}
+  \label{eq:Hk_def}
 	H_k = \bmqty{P_k^{\prime} & W_k^T \\ W_k & G_k}
   \eqqcolon
   \bmqty{(H_k)_{11} & (H_k)_{21}^T \\ (H_k)_{21} & (H_k)_{22}},
@@ -571,6 +572,324 @@ from~\eqref{eq:Htilde_def} and~\eqref{eq:block_1}.
   \end{equation}
   where $A - B R^{-1} B (\tilde{H}_\infty)_{11}$ is Hurwitz,
   which possess the unique positive-definite solution $P^\ast$.
+\end{proof}
+
+\begin{lem}
+  The equilibrium points of the iteration%
+  ~\eqref{eq:update_law} and~\eqref{eq:ith_HJB_equation}
+  are of the form
+  \begin{equation}
+    H = \bmqty{P + K^T G K & K^T G \\ G K & G},
+    \quad
+    K = R^{-1} B^T P,
+  \end{equation}
+  where $P$ can be any solution of
+  the following algebraic Riccati equation,
+  $P A + A^T P + Q - P B R^{-1} B^T P = 0$,
+  and $G$ is the unique positive definite solution of
+  the following Lyapunov equation,
+  $G F + F^T G + R = 0$.
+\end{lem}
+
+\begin{proof}
+  Let the control gain
+  at the equilibrium point be $K$.
+  Then, 
+  from~\eqref{eq:update_law} and~\eqref{eq:Hk_def},
+  the equilibrium point $H$ can be expressed as
+  \begin{equation}
+    H
+    =
+    \bmqty{P + K^T G K & K^T G \\ G K & G}
+    =
+    \bmqty{I & K^T \\ 0 & I} 
+    \bmqty{P & 0 \\ 0 & G}
+    \bmqty{I & 0 \\ K & I}.
+  \end{equation}
+  Using~\eqref{eq:Aiprime_def},
+  the matrix equation~\eqref{eq:ith_HJB_equation} turns out to be
+  \begin{equation}
+    \label{eq:proof:at_equilibrium}
+    \bmqty{P & 0 \\ 0 & G}
+    \bmqty{A - B K & B \\ 0 & F}
+    +
+    \bmqty{\pqty{A - B K}^T & 0 \\ B^T & F^T}
+    \bmqty{P & 0 \\ 0 & G}
+    +
+    \bmqty{I & -K^T \\ 0 & I}
+    Q^\prime
+    \bmqty{I & 0 \\ -K & I}
+    = 0.
+  \end{equation}
+  All the elements of~\eqref{eq:proof:at_equilibrium} are given by
+  \begin{gather}
+    P (A - B K) + (A - B K)^T P + Q + K^T R K = 0,
+    \\
+    P B - K^T R = 0,
+    \\
+    G F + F^T G + R = 0,
+  \end{gather}
+  which complete the proof.
+\end{proof}
+
+\begin{lem}
+  There is only one stabilizing equilibrium point.
+\end{lem}
+
+\begin{lem}
+  Given a matrix $K$
+  such that $A - BK$ and $-(A - BK)^T$ do not share any eigenvalues,
+  the matrix $K$ is
+  an equilibrium point of Kleinman iteration,
+  if and only if
+  $K = R^{-1} B^T P$ where
+  $P$ is a solution of
+  \begin{equation}
+    \label{eq:thm:ARE}
+    PA + A^T P + Q - P B R^{-1} B^T P = 0.
+  \end{equation}
+\end{lem}
+
+\begin{proof}
+  ($\Leftarrow$)
+  Let $K_k = K = R^{-1} B^T P$.
+  Then, $P_k$ is the unique symmetric solution of
+  \begin{equation}
+    \label{eq:proof:kleinman}
+    P_k (A - B K_k) + (A - B K_k)^T P_k + Q + K_k^T R K_k = 0,
+  \end{equation}
+  by Sylvester's theorem.
+  Since $P$ is a solution to~\eqref{eq:proof:kleinman},
+  we have $P_k = P$.
+  The updated gain of Kleinman iteration is given by
+  $K_{k+1} = R^{-1} B^T P_k = R^{-1} B^T P = K_k$,
+  which implies that $K$ is an equilibrium point.
+
+  ($\Rightarrow$)
+  Given $K_k = K$,
+  we have $K_{k+1} = R^{-1} B^T P_k$
+  from Kleinman iteration,
+  where $P_k$ is the unique solution to~\eqref{eq:proof:kleinman}.
+  Since $K$ is an equilibrium point,
+  $K_{k+1} = K_k = R^{-1} B^T P_k$.
+  Substituting $K_k$ into~\eqref{eq:proof:kleinman},
+  it is followed that
+  $P_k$ is a solution to~\eqref{eq:thm:ARE},
+  which completes the proof.
+\end{proof}
+
+\begin{lem}
+  For Kleinman iteration,
+  if $K_0$ is an unstable initial gain,
+  then the subsequent matrices
+  $A_k \coloneqq A - B K_k$, for $k=1, 2, \dotsc$, are all unstable.
+\end{lem}
+
+\begin{proof}
+  Suppose that $A_k$ is unstable.
+  From~\cite{wonham_linear_1985},
+  $\mathcal{L}_N(A_k, C_k) = \varnothing$,
+  where $C_k^T C_k = Q + K_k^T R K_k$.
+  Let $P_k \in \mathcal{L}(A_k, C_k)$,
+  then $P_k \in \mathcal{R}(A, B \sqrt{R^{-1}}, \tilde{C}_k)$,
+  where $\tilde{C}_k^T \tilde{C}_k = Q + \tilde{K}_k^T R \tilde{K}_k$,
+  because $K_{k+1} = R^{-1} B^T P_k$
+  from Kleinman iteration.
+  Suppose that $A_{k+1}$ is stable.
+  From~\cite[Lemma 4]{willems_least_1971},
+  there exists
+  a unique, positive semi-definite matrix
+  $P_k^\ast \in \mathcal{R}(A, B \sqrt{R^{-1}}, \tilde{C}_k)$.
+  However, since $\mathcal{L}_N(A_k, C_k) = \varnothing$,
+  $P_k \neq P_k^\ast$ which contradicts to the uniqueness.
+  Hence, $A_{k+1}$ is unstable,
+  and the proof is completed by induction.
+\end{proof}
+
+\begin{lem}
+  For $k = 0, 1, \dotsc$,
+  $\dim(\mathbb{E}_{\ge 0} (A - B K_k))$ is monotonically decreasing
+  under SQL.
+\end{lem}
+
+\begin{proof}
+  Suppose that
+  $\dim(\mathbb{E}_{\ge 0}(A - B K_k)) = r \le n$.
+  Since $F$ is Hurwitz,
+  $\dim(\mathbb{E}_{\ge 0}(\tilde{A}_k)) = r$,
+  which is followed by
+  $\dim(\mathbb{E}_{\le 0}(\tilde{H}_k)) = r$
+  from~\eqref{eq:rearranged_iteration}.
+  From the LDU decomposition in~\eqref{eq:Htilde_def},
+  we have
+  $\dim(\mathbb{E}_{\le 0}(P_k)) \le r$.
+  Using $P_k = (\tilde{H}_{k+1})_{11}$,
+  and from~\eqref{eq:block_1},
+  $\dim(\mathbb{E}_{\ge 0}(A_{k+1})) \le r$,
+  which completes the proof by induction.
+\end{proof}
+
+\begin{lem}
+  Suppose that $A - BK$ and $F$ do not share any eigenvalues
+  where $K = R^{-1} B^T P$ and $P \in \mathcal{R}(A, B\sqrt{R^{-1}}, C)$.
+  If $(\tilde{H}_0)_{21} \neq 0$,
+  then $(\tilde{H}_k)_{21} \neq 0$ for all $k \ge 1$.
+\end{lem}
+
+\begin{thm}
+  Every equilibrium points $P$
+  except the stabilizing one are unstable.
+\end{thm}
+
+\begin{lem}
+  If $(\tilde{H}_k)_{22} \succ 0$, then $\rho(A_k)$ is bounded.
+\end{lem}
+
+\begin{proof}
+  Suppose that $v$ is an eigenvector of $A_k$
+  with respect to an eigenvalue $\lambda$
+  such that $\Re(\lambda) > 0$.
+  First,
+  we assume that
+  $n \le m$,
+  and
+  $B \in \mathbb{R}^{n \times m}$
+  has a full row rank.
+  From $B K_k v = (A - \lambda I)v$,
+  we have
+  \begin{equation}
+    K_k v = R^{-1} B^T (B R^{-1} B^T)^{-1} (A - \lambda I) v + z.
+  \end{equation}
+  where $z \in \ker(B)$.
+  Let
+  \begin{equation}
+    w = R^{-1} B^T (B R^{-1} B^T)^{-1} v + gz,
+  \end{equation}
+  where $g \in \mathbb{C}$.
+  Then,
+  we have $B w = v$.
+  Also, for the brevity,
+  let
+  \begin{equation}
+    D = (B R^{-1} B^T)^{-1},
+    \quad
+    C = B^T D.
+  \end{equation}
+  Note that $C^T z = 0$.
+  From~\eqref{eq:block_1},
+  \begin{align}
+    2 \lambda v^T (\tilde{H}_k)_{11} v
+    & =
+    - v^T \pqty{Q + K_k^T R K_k} v
+    \\
+    & =
+    - v^T Q v
+    - v^T (A - \lambda I)^T D (A - \lambda I) v
+    \\
+    & \quad
+    - 2 z^T C (A - \lambda I) v
+    - z^T R z
+    \\
+    & =
+    - v^T Q v
+    - v^T (A - \lambda I)^T D (A - \lambda I) v
+    - z^T R z.
+  \end{align}
+  From~\eqref{eq:block_2},
+  \begin{align}
+    (\lambda - s) w^T (\tilde{H}_k)_{21} v
+    & =
+    w^T R K_k v - v^T (\tilde{H}_k)_{11} v
+    \\
+    & =
+    v^T D (A- \lambda I) v
+    - v^T (\tilde{H}_k)_{11} v
+    \\
+    & \quad
+    + z^T C v
+    + g z^T C (A - \lambda I) v
+    + g z^T R z
+    \\
+    & =
+    v^T D (A- \lambda I) v
+    - v^T (\tilde{H}_k)_{11} v
+    + g z^T R z.
+  \end{align}
+  From~\eqref{eq:block_3},
+  \begin{align}
+    2s w^T (\tilde{H}_k)_{22} w
+    & =
+    w^T R w + w^T (\tilde{H}_k)_{21} v + v^T (\tilde{H}_k)_{21}^T w
+    \\
+    & =
+    v^T D v
+    + 2 g z^T C v
+    + g^2 z^T R z
+    \\
+    & \quad
+    + \frac{1}{\lambda (\lambda - s)} v^T \pqty{%
+      Q + (A - \lambda I)^T D (A - \lambda I)
+    } v
+    \\
+    & \quad
+    + \frac{1}{\lambda (\lambda - s)} v^T \pqty{%
+      \lambda D (A - \lambda I) + \lambda (A - \lambda I)^T D
+    } v
+    \\
+    & \quad
+    + \frac{2}{\lambda (\lambda - s)} z^T C (A - \lambda I) v
+    + \frac{1}{\lambda (\lambda - s)} z^T R z
+    \\
+    & \quad
+    + \frac{2}{\lambda - s} z^T \pqty{%
+      C + g C (A - \lambda I)
+    } v
+    + \frac{2 g}{\lambda - s} z^T R z.
+    \\
+    & =
+    \frac{1}{\lambda(\lambda - s)} v^T \pqty{Q + A^T D A - s \lambda D} v
+    \\
+    & \quad
+    + \pqty{%
+      g^2
+      + \frac{2 g}{\lambda - s}
+      + \frac{1}{\lambda (\lambda - s)}
+    } z^T R z.
+  \end{align}
+  Since $(\tilde{H}_k)_{22} \succ 0$,
+  we have
+  \begin{equation}
+    \frac{1}{\lambda - s} v^T \pqty{Q + A^T D A - s \lambda D} v > 0.
+  \end{equation}
+  and
+  \begin{equation}
+    g^2
+    + \frac{2 g}{\lambda - s}
+    + \frac{1}{\lambda (\lambda - s)}
+    > 0.
+  \end{equation}
+  Next,
+  suppose that
+  $n > m$,
+  and 
+  $B \in \mathbb{R}^{n \times m}$
+  has a full column rank.
+  Then,
+  \begin{equation}
+    K_k v = (B^T R^{-1} B)^{-1} B^T R^{-1} (A - \lambda I)v.
+  \end{equation}
+  Let $v = B w + z$,
+  where $z \in \ker(B^T)$.
+  Then,
+  \begin{equation}
+    w = (B^T R^{-1} B)^{-1} B^T R^{-1} (v - z).
+  \end{equation}
+  Let
+  \begin{align}
+    C & = R (B^T R^{-1} B)^{-1} B^T R^{-1},
+    \\
+    D & = C^T R^{-1} C.
+  \end{align}
 \end{proof}
 
 
