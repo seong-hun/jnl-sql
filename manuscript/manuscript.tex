@@ -32,6 +32,7 @@
 \newtheorem{lem}{Lemma}
 \newtheorem{cor}{Corollary}
 \newtheorem{prop}{Proposition}
+\newtheorem{hypo}{Hypothesis}
 
 \newtheorem{defi}{Definition}
 \newtheorem{prob}{Problem}
@@ -633,8 +634,68 @@ from~\eqref{eq:Htilde_def} and~\eqref{eq:block_1}.
 \end{proof}
 
 \begin{lem}
+  \label{lem:only_one_eq}
   There is only one stabilizing equilibrium point.
 \end{lem}
+
+\begin{proof}
+  Suppose that $K_k = R^{-1} B^T P + E_k$,
+  where $P$ is a solution of the Riccati equation,
+  $PA + A^TP + Q - P B R^{-1} B^T P = 0$,
+  and $\norm{E_k} \ll 1$.
+  From~\eqref{eq:block_1},
+  the corresponding $(\tilde{H}_k)_{11}$
+  is the solution of 
+  \begin{equation}
+    \pqty\big{(\tilde{H}_k)_{11} - P} \pqty{A_c - B E_k}
+    + \pqty{A_c - B E_k}^T \pqty\big{(\tilde{H}_k)_{11} - P}
+    + E_k^T R E_k = 0,
+  \end{equation}
+  where $A_c \coloneqq A - B R^{-1} B^T P$.
+  The solution can be approximated to
+  $(\tilde{H}_k)_{11} \simeq P$
+  since $\norm{E_k} \ll 1$.
+  From~\eqref{eq:block_2},
+  the solution $(\tilde{H}_k)_{21}$ can also be approximated to
+  \begin{equation}
+    (\tilde{H}_k)_{21}
+    \simeq R E_k \pqty{A_c - s I - B E_k}^{-1}
+    \simeq R E_k \pqty{A_c - s I}^{-1}.
+  \end{equation}
+  Finally,
+  from~\eqref{eq:block_3},
+  \begin{align}
+    E_{k+1}
+    & = E_k + (\tilde{H}_k)_{22}^{-1} (\tilde{H}_k)_{21}
+    \\
+    & \simeq
+    E_k
+    + 2 s \pqty{R + (\tilde{H}_k)_{21} B + B^T (\tilde{H}_k)_{21}^T}
+    R E_k \pqty{A_c - s I}^{-1}
+    \\
+    & \simeq
+    E_k
+    + 2 s E_k \pqty{A_c - s I}^{-1}.
+    \\
+    & =
+    E_k \pqty{I + 2 s \pqty{A_c - s I}^{-1}}
+    \\
+    & =
+    E_k \pqty{A_c + s I} \pqty{A_c - s I}^{-1}
+    \eqqcolon E_k A_E.
+  \end{align}
+  Note that
+  since $s > 0$,
+  if $A_c$ has a positive eigenvalue,
+  the system matrix for $E_k$ has an eigenvalue
+  outside of a unit circle,
+  which implies that the system is unstable.
+  The fact that
+  there is only one matrix
+  in which all eigenvalues have
+  negative real parts
+  completes the proof.
+\end{proof}
 
 \begin{lem}
   Given a matrix $K$
@@ -736,13 +797,13 @@ from~\eqref{eq:Htilde_def} and~\eqref{eq:block_1}.
   then $(\tilde{H}_k)_{21} \neq 0$ for all $k \ge 1$.
 \end{lem}
 
-\begin{thm}
-  Every equilibrium points $P$
-  except the stabilizing one are unstable.
-\end{thm}
-
 \begin{lem}
-  If $(\tilde{H}_k)_{22} \succ 0$, then $\rho(A_k)$ is bounded.
+  \label{lem:bounded_Ak_for_fat_B}
+  Suppose that
+  $B \in \mathbb{R}^{n \times m}$
+  is a fat matrix with full row rank.
+  If $(\tilde{H}_k)_{22} \succ 0$,
+  then the spectral radius $\rho(A_k)$ is bounded.
 \end{lem}
 
 \begin{proof}
@@ -866,32 +927,171 @@ from~\eqref{eq:Htilde_def} and~\eqref{eq:block_1}.
     g^2
     + \frac{2 g}{\lambda - s}
     + \frac{1}{\lambda (\lambda - s)}
-    > 0.
+    > 0,
   \end{equation}
-  Next,
-  suppose that
-  $n > m$,
-  and 
-  $B \in \mathbb{R}^{n \times m}$
-  has a full column rank.
-  Then,
-  \begin{equation}
-    K_k v = (B^T R^{-1} B)^{-1} B^T R^{-1} (A - \lambda I)v.
-  \end{equation}
-  Let $v = B w + z$,
-  where $z \in \ker(B^T)$.
-  Then,
-  \begin{equation}
-    w = (B^T R^{-1} B)^{-1} B^T R^{-1} (v - z).
-  \end{equation}
-  Let
-  \begin{align}
-    C & = R (B^T R^{-1} B)^{-1} B^T R^{-1},
-    \\
-    D & = C^T R^{-1} C.
-  \end{align}
+  which completes the proof.
 \end{proof}
 
+\begin{lem}
+  \label{lem:convergent_22_implies_eq}
+  If a sequence
+  $\lim_{k \to \infty} (\tilde{H}_k)_{11}$
+  is convergent,
+  then $\lim_{k \to \infty} \tilde{K}_k = 0$.
+\end{lem}
+
+\begin{proof}
+  Let
+  $D_k = (\tilde{H}_k)_{21} (\tilde{H}_k)_{22}^{-1} (\tilde{H}_k)_{21}$.
+  Since
+  \begin{equation}
+    (\tilde{H}_{k})_{11}
+    =
+    (\tilde{H}_0)_{11} - \sum_{l=0}^{k-1} D_l,
+  \end{equation}
+  the convergence of the sequence
+  $\lim_{k \to \infty} (\tilde{H}_k)_{11}$
+  implies that
+  a series
+  $\sum_{k=0}^{\infty} D_k$
+  is also convergent,
+  and hence,
+  $\lim_{k \to \infty} D_k = 0$.
+  Multiplying
+  $(\tilde{H}_k)_{22}^{-1} (\tilde{H}_k)_{21}$
+  and its transpose to
+  the both sides of~\eqref{eq:block_3},
+  we have
+  \begin{align}
+    \nonumber
+    2 s D_k
+    & =
+    (\tilde{H}_k)_{21}^T (\tilde{H}_k)_{22}^{-1}
+    R (\tilde{H}_k)_{22}^{-1} (\tilde{H}_k)_{21}
+    + D_k B (\tilde{H}_k)_{22}^{-1} (\tilde{H}_k)_{21}
+    + (\tilde{H}_k)_{21}^T (\tilde{H}_k)_{22}^{-1} B^T D_k
+    \\
+    \label{lem:tmp}
+    & =
+    \norm{(\tilde{H}_k)_{22}^{-1} (\tilde{H}_k)_{21} + R^{-1} B^T D_k}_R^2
+    - \norm{R^{-1} B^T D_k}_R^2.
+  \end{align}
+  Taking the limit of~\eqref{lem:tmp} as $k \to \infty$,
+  we can conclude that
+  $\lim_{k \to \infty} (\tilde{H}_k)_{22}^{-1} (\tilde{H}_k)_{21} = 0$,
+  which completes the proof.
+\end{proof}
+
+\begin{hypo}
+  For any $K_k$ such that
+  $(\tilde{H}_k)_{22} \succ 0$,
+  there exists a scalar $\mu$ such that
+  $(\tilde{H}_k)_{11} \succ \mu I_n$.
+\end{hypo}
+
+If the above hypothesis is proved,
+we can conclude that
+for any $K_K$ such that $(\tilde{H}_k)_{22} \succ 0$,
+the matrix $(\tilde{H}_k)_{11}$ is lower bounded.
+Moreover,
+due to
+$D_k = (\tilde{H}_k)_{21}(\tilde{H}_k)_{22}^{-1}(\tilde{H}_k)_{21} \succ 0$,
+the limit of $(\tilde{H}_k)_{11}$ is convergent,
+and using Lemma~\ref{lem:convergent_22_implies_eq},
+we obtain $\lim_{k \to \infty} \tilde{K}_k = 0$.
+However,
+by Lemma~\ref{lem:only_one_eq},
+there is only one equilibrium point
+where the corresponding $A_k$ is stable.
+
+\begin{proof}
+  Since $A_k - s I$ is non-singular,
+  there is $V_k$ such that
+  $\pqty{A_k - s I} V_k = B$.
+  Then,
+  \begin{equation}
+    \pqty{A - s I} V_k = B \pqty{I + K_k V_k}.
+  \end{equation}
+  From~\eqref{eq:block_2},
+  \begin{align}
+    0
+    & =
+    (\tilde{H}_k)_{21} \pqty{A_k - sI} V_k
+    + B^T (\tilde{H}_k)_{11} V_k - R K_k V_k
+    \\
+    & = 
+    (\tilde{H}_k)_{21} B
+    + V_k^T \pqty{A_k - s I}^T (\tilde{H}_k)_{11} V_k
+    - R K_k V_k.
+  \end{align}
+  From~\eqref{eq:block_3},
+  \begin{align}
+    & R + (\tilde{H}_k)_{21} B + B^T (\tilde{H}_k)_{21}^T
+    \\
+    & =
+    R + R K_k V_k + V_k^T K_k^T R
+    \\
+    &
+    - V_k^T \pqty{(\tilde{H}_k)_{11} A_k + A_k^T (\tilde{H}_k)_{11}} V_k
+    + 2 s V_k^T (\tilde{H}_k)_{11} V_k.
+  \end{align}
+  From~\eqref{eq:block_1},
+  \begin{align}
+    & R + (\tilde{H}_k)_{21} B + B^T (\tilde{H}_k)_{21}^T
+    \\
+    & =
+    R + R K_k V_k + V_k^T K_k^T R
+    + V_k^T \pqty{Q + K_k^T R K_k} V_k
+    \\
+    &
+    + 2 s V_k^T (\tilde{H}_k)_{11} V_k
+    \\
+    & =
+    V_k^T Q V_k
+    + \pqty{I + K_k V_k}^T R \pqty{I + K_k V_k}
+    + 2 s V_k^T (\tilde{H}_k)_{11} V_k
+    \\
+    & =
+    2 s V_k^T (\tilde{H}_k)_{11} V_k
+    + V_k^T Q V_k
+    \\
+    &
+    + \pqty{I + K_k V_k}^T B^T B \pqty{B^T B}^{-1}
+    R \pqty{B^T B}^{-1} B^T B \pqty{I + K_k V_k}
+    \\
+    & =
+    2 s V_k^T (\tilde{H}_k)_{11} V_k
+    + V_k^T Q V_k
+    \\
+    &
+    + V_k^T
+    \pqty{A - s I}^T B \pqty{B^T B}^{-1} R \pqty{B^T B}^{-1} B^T \pqty{A - s I}
+    V_k
+    \\
+    & =
+    2 s V_k^T (\tilde{H}_k)_{11} V_k + V_k^T Q_0 V_k,
+  \end{align}
+  where $
+  Q_0
+  \coloneqq
+  Q
+  + \pqty{A - s I}^T B \pqty{B^T B}^{-1} R \pqty{B^T B}^{-1} B^T \pqty{A - s I}
+  $,
+  which is constant for all $k$.
+  From the definition of $V_k$,
+  we have
+  \begin{equation}
+    \pqty{A_{k+1} - s I} V_{k + 1} = B = \pqty{A_{k} - s I} V_k.
+  \end{equation}
+  Rearranging the above equation gives
+  \begin{equation}
+    V_k \pqty{I + \tilde{K}_k V_{k+1}}
+    = V_{k+1}
+    = \pqty{I - V_k \tilde{K}_k}^{-1} V_k.
+  \end{equation}
+  Hence, if $\pqty{I + \tilde{K}_k V_{k+1}}$ is non-singular,
+  $V_k$ has the same column spaces for all $k$.
+\end{proof}
 
 \bibliographystyle{IEEEtran}
 \bibliography{manuscript}
