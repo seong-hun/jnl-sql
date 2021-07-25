@@ -983,6 +983,7 @@ from~\eqref{eq:Htilde_def} and~\eqref{eq:block_1}.
 \end{proof}
 
 \begin{hypo}
+  \label{hypo:H11}
   For any $K_k$ such that
   $(\tilde{H}_k)_{22} \succ 0$,
   there exists a scalar $\mu$ such that
@@ -1004,29 +1005,138 @@ by Lemma~\ref{lem:only_one_eq},
 there is only one equilibrium point
 where the corresponding $A_k$ is stable.
 
+Since $A_k - s I$ is non-singular,
+there is $V_k$ such that
+$\pqty{A_k - s I} V_k = B$.
+Then,
+\begin{equation}
+  \pqty{A - s I} V_k = B \pqty{I + K_k V_k}.
+\end{equation}
+From~\eqref{eq:block_2},
+\begin{align}
+  0
+  & =
+  (\tilde{H}_k)_{21} \pqty{A_k - sI} V_k
+  + B^T (\tilde{H}_k)_{11} V_k - R K_k V_k
+  \\
+  & = 
+  (\tilde{H}_k)_{21} B
+  + V_k^T \pqty{A_k - s I}^T (\tilde{H}_k)_{11} V_k
+  - R K_k V_k.
+\end{align}
+From~\eqref{eq:block_3},
+\begin{align}
+  & R + (\tilde{H}_k)_{21} B + B^T (\tilde{H}_k)_{21}^T
+  \\
+  & =
+  R + R K_k V_k + V_k^T K_k^T R
+  \\
+  &
+  - V_k^T \pqty{(\tilde{H}_k)_{11} A_k + A_k^T (\tilde{H}_k)_{11}} V_k
+  + 2 s V_k^T (\tilde{H}_k)_{11} V_k.
+\end{align}
+From~\eqref{eq:block_1},
+\begin{align}
+  & R + (\tilde{H}_k)_{21} B + B^T (\tilde{H}_k)_{21}^T
+  \\
+  & =
+  R + R K_k V_k + V_k^T K_k^T R
+  + V_k^T \pqty{Q + K_k^T R K_k} V_k
+  \\
+  &
+  + 2 s V_k^T (\tilde{H}_k)_{11} V_k
+  \\
+  & =
+  V_k^T Q V_k
+  + \pqty{I + K_k V_k}^T R \pqty{I + K_k V_k}
+  + 2 s V_k^T (\tilde{H}_k)_{11} V_k
+  \\
+  & =
+  2 s V_k^T (\tilde{H}_k)_{11} V_k
+  + V_k^T Q V_k
+  \\
+  &
+  + \pqty{I + K_k V_k}^T B^T B \pqty{B^T B}^{-1}
+  R \pqty{B^T B}^{-1} B^T B \pqty{I + K_k V_k}
+  \\
+  & =
+  2 s V_k^T (\tilde{H}_k)_{11} V_k
+  + V_k^T Q V_k
+  \\
+  &
+  + V_k^T
+  \pqty{A - s I}^T B \pqty{B^T B}^{-1} R \pqty{B^T B}^{-1} B^T \pqty{A - s I}
+  V_k
+  \\
+  & =
+  2 s V_k^T (\tilde{H}_k)_{11} V_k + V_k^T Q_0 V_k,
+\end{align}
+where $
+Q_0
+\coloneqq
+Q
++ \pqty{A - s I}^T B \pqty{B^T B}^{-1} R \pqty{B^T B}^{-1} B^T \pqty{A - s I}
+$,
+which is constant for all $k$.
+We can conclude that
+\begin{equation}
+  \lambda_{\min}\pqty\big{V_k^T (\tilde{H}_k)_{11} V_k}
+  \ge
+  - \lambda_{\max}\pqty{V_k^T Q_0 V_k}.
+\end{equation}
+If
+$V_k \in \mathbb{R}^{n \times m}$
+has full row rank,
+\begin{equation}
+  \lambda_{\min}\pqty\big{(\tilde{H}_k)_{11}}
+  \ge
+  - \lambda_{\max}\pqty{Q_0},
+\end{equation}
+which implies Hypothesis~\ref{hypo:H11}.
+% From the definition of $V_k$,
+% we have
+% \begin{equation}
+%   \pqty{A_{k+1} - s I} V_{k + 1} = B = \pqty{A_{k} - s I} V_k.
+% \end{equation}
+% Rearranging the above equation gives
+% \begin{equation}
+%   V_k \pqty{I + \tilde{K}_k V_{k+1}}
+%   = V_{k+1}
+%   = \pqty{I - V_k \tilde{K}_k}^{-1} V_k.
+% \end{equation}
+% Hence, if $\pqty{I + \tilde{K}_k V_{k+1}}$ is non-singular,
+% $V_k$ has the same column spaces for all $k$.
+
+However,
+it is still difficult to prove the hypothesis
+when $V_k$ has full column rank.
+
 \begin{proof}
-  Since $A_k - s I$ is non-singular,
+  Since $(\tilde{H}_k)_{11}$ is non-singular,
   there is $V_k$ such that
-  $\pqty{A_k - s I} V_k = B$.
-  Then,
-  \begin{equation}
-    \pqty{A - s I} V_k = B \pqty{I + K_k V_k}.
-  \end{equation}
+  $V_k^T (\tilde{H}_k)_{11} = (\tilde{H}_k)_{21}$.
   From~\eqref{eq:block_2},
-  \begin{align}
-    0
-    & =
-    (\tilde{H}_k)_{21} \pqty{A_k - sI} V_k
-    + B^T (\tilde{H}_k)_{11} V_k - R K_k V_k
-    \\
-    & = 
-    (\tilde{H}_k)_{21} B
-    + V_k^T \pqty{A_k - s I}^T (\tilde{H}_k)_{11} V_k
-    - R K_k V_k.
-  \end{align}
+  \begin{equation}
+    \label{eq:tmp1}
+    B^T (\tilde{H}_k)_{11} V_k
+    =
+    R K_k V_k
+    - V_k^T (\tilde{H}_k)_{11} \pqty{A_k - sI} V_k
+  \end{equation}
   From~\eqref{eq:block_3},
+  \begin{equation}
+    2 s (\tilde{H}_k)_{22}
+    = R + V_k^T (\tilde{H}_k)_{11} B + B^T (\tilde{H}_k)_{11}^T V_k
+  \end{equation}
+  Substituting~\eqref{eq:tmp1},
   \begin{align}
-    & R + (\tilde{H}_k)_{21} B + B^T (\tilde{H}_k)_{21}^T
+    2 s (\tilde{H}_k)_{22}
+    & =
+    R + R K_k V_k + V_k^T K_k^T R
+    \\
+    &
+    - V_k^T (\tilde{H}_k)_{11} \pqty{A_k - sI} V_k
+    - V_k^T \pqty{A_k - sI}^T (\tilde{H}_k)_{11} V_k
     \\
     & =
     R + R K_k V_k + V_k^T K_k^T R
@@ -1036,62 +1146,68 @@ where the corresponding $A_k$ is stable.
     + 2 s V_k^T (\tilde{H}_k)_{11} V_k.
   \end{align}
   From~\eqref{eq:block_1},
+  \begin{equation}
+    (\tilde{H}_k)_{22} - V_k^T (\tilde{H}_k)_{11} V_k
+    =
+    \frac{1}{2s} \pqty{
+      \pqty{I + K_k V_k}^T R \pqty{I + K_k V_k}
+      + V_k^T Q V_k
+    }.
+  \end{equation}
+  From~\eqref{eq:Htilde_def},
   \begin{align}
-    & R + (\tilde{H}_k)_{21} B + B^T (\tilde{H}_k)_{21}^T
+    \bmqty{%
+      (\tilde{H}_k)_{11} & (\tilde{H}_k)_{21}^T
+      \\
+      (\tilde{H}_k)_{21} & (\tilde{H}_k)_{22}
+    }
+    & =
+    \bmqty{I & \tilde{K}_{k}^T \\ 0 & I}
+    \bmqty{%
+      (\tilde{H}_k)_{11} - \tilde{K}_k^T (\tilde{H}_k)_{22} \tilde{K}_k & 0
+      \\
+      0 & (\tilde{H}_k)_{22}
+    }
+    \bmqty{I & 0 \\ \tilde{K}_{k} & I}
     \\
     & =
-    R + R K_k V_k + V_k^T K_k^T R
-    + V_k^T \pqty{Q + K_k^T R K_k} V_k
-    \\
-    &
-    + 2 s V_k^T (\tilde{H}_k)_{11} V_k
-    \\
-    & =
-    V_k^T Q V_k
-    + \pqty{I + K_k V_k}^T R \pqty{I + K_k V_k}
-    + 2 s V_k^T (\tilde{H}_k)_{11} V_k
-    \\
-    & =
-    2 s V_k^T (\tilde{H}_k)_{11} V_k
-    + V_k^T Q V_k
-    \\
-    &
-    + \pqty{I + K_k V_k}^T B^T B \pqty{B^T B}^{-1}
-    R \pqty{B^T B}^{-1} B^T B \pqty{I + K_k V_k}
-    \\
-    & =
-    2 s V_k^T (\tilde{H}_k)_{11} V_k
-    + V_k^T Q V_k
-    \\
-    &
-    + V_k^T
-    \pqty{A - s I}^T B \pqty{B^T B}^{-1} R \pqty{B^T B}^{-1} B^T \pqty{A - s I}
-    V_k
-    \\
-    & =
-    2 s V_k^T (\tilde{H}_k)_{11} V_k + V_k^T Q_0 V_k,
+    \bmqty{I & 0 \\ V_k^T & I}
+    \bmqty{%
+      (\tilde{H}_k)_{11} & 0
+      \\
+      0 & (\tilde{H}_k)_{22} - V_k^T (\tilde{H}_k)_{11} V_k
+    }
+    \bmqty{I & V_k \\ 0 & I}
   \end{align}
-  where $
-  Q_0
-  \coloneqq
-  Q
-  + \pqty{A - s I}^T B \pqty{B^T B}^{-1} R \pqty{B^T B}^{-1} B^T \pqty{A - s I}
-  $,
-  which is constant for all $k$.
-  From the definition of $V_k$,
-  we have
-  \begin{equation}
-    \pqty{A_{k+1} - s I} V_{k + 1} = B = \pqty{A_{k} - s I} V_k.
-  \end{equation}
-  Rearranging the above equation gives
-  \begin{equation}
-    V_k \pqty{I + \tilde{K}_k V_{k+1}}
-    = V_{k+1}
-    = \pqty{I - V_k \tilde{K}_k}^{-1} V_k.
-  \end{equation}
-  Hence, if $\pqty{I + \tilde{K}_k V_{k+1}}$ is non-singular,
-  $V_k$ has the same column spaces for all $k$.
 \end{proof}
+
+
+\subsection{Tall Case Analysis}
+
+For tall matrices
+$B \in \mathbb{R}^{n \times m}$ where $n > m$,
+we introduce an auxiliary state vector
+$z \in \mathbb{R}^{\bar{m}}$
+satisfying
+$u = C z$
+where the matrix
+$C \in \mathbb{R}^{m \times \bar{m}}$
+has full row rank with $\bar{m} \ge n$.
+Let $C^\dagger$ be a Moor-Penrose psuedo-inverse
+defined by
+$C^\dagger = C^T \pqty{C C^T}^{-1}$.
+Then,
+the state vector $z$ can be constructed from the input vector $u$,
+as $z = C^\dagger u$.
+
+Now consider the following dynamics.
+\begin{equation}
+  \dot{z}
+  =
+  F \pqty{z + C^\dagger K x} - C^\dagger K \dot{x}.
+\end{equation}
+This is an invalid analysis
+since the matrix $BC$ has rank $m$ not $n$.
 
 \bibliographystyle{IEEEtran}
 \bibliography{manuscript}
