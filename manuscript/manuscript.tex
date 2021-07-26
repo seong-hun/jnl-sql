@@ -1,1215 +1,289 @@
-\documentclass[12pt,draftcls,onecolumn]{IEEEtran}
+\RequirePackage{etoolbox}
+\newtoggle{draft}
+\settoggle{draft}{true}
 
-%-------------------------------------------------------------------------------
-%		Packages
-%-------------------------------------------------------------------------------
-\usepackage{cite}
-\usepackage{amsmath,amssymb,amsfonts}
-\usepackage{textcomp}
-\usepackage{algorithm}
-\usepackage{algpseudocode}
+\iftoggle{draft}{%
+	\documentclass[12pt,draftcls,onecolumn]{IEEEtran}
+	\def\Figratio{0.8\linewidth}
+	\usepackage{amsthm}
+}{%
+	\documentclass[journal,twoside,web]{ieeecolor}
+	\def\Figratio{1\linewidth}
+	\usepackage{journalformat}
+}
 
-\usepackage{mathtools}
-\usepackage{physics}
-\usepackage{bbm}
-\usepackage{booktabs,multirow}
-\usepackage{siunitx}
-\sisetup{table-figures-exponent=1, table-sign-exponent=true}
-\sisetup{group-separator={,}}
+\usepackage{mystyle}
 
-%-------------------------------------------------------------------------------
-%		Graphicsx
-%-------------------------------------------------------------------------------
-\usepackage{graphicx}
-\usepackage[caption=false, font=footnotesize]{subfig}
-\graphicspath{{src/}}
 
-%------------------------------------------------------------------------------
-%		AMS Theorems
-%------------------------------------------------------------------------------
-\usepackage{amsthm}
-\newtheorem{thm}{Theorem}
-\newtheorem{lem}{Lemma}
-\newtheorem{cor}{Corollary}
-\newtheorem{prop}{Proposition}
-\newtheorem{hypo}{Hypothesis}
-
-\newtheorem{defi}{Definition}
-\newtheorem{prob}{Problem}
-\newtheorem{exam}{Example}
-\newtheorem{alg}{Algorithm}
-\newtheorem{ass}{Assumption}
-
-\newtheorem{remark}{Remark}
-\newtheorem{note}{Note}
-
-%------------------------------------------------------------------------------
-%		Macros
-%------------------------------------------------------------------------------
-\DeclarePairedDelimiterX{\inner}[2]{\langle}{\rangle}{#1, #2}
-
-%------------------------------------------------------------------------------
-%		Document
-%------------------------------------------------------------------------------
 \begin{document}
 
-\title{Research Note}
-\author{Seong-hun~Kim}
-\date{\today}
+\title{%
+	Data-Efficient Active Weighting Algorithm
+	for Composite Adaptive Control Systems
+}
+\author{%
+	Seong-hun~Kim,
+	and~Youdan~Kim,~\IEEEmembership{Senior Member,~IEEE}
+	\thanks{%
+		This work was supported
+		by a National Research Foundation of Korea (NRF)
+		grant funded by the Korean government (MSIT)
+		(No. 2019R1A2C208394612).
+	}
+	\thanks{%
+		S-h. Kim, and Y. Kim are with the
+		Institute of Advanced Aerospace Technology,
+		Department of Aerospace Engineering,
+		Seoul National University,
+		Seoul,
+		08826,
+		Republic of Korea
+	(e-mail: ydkim@snu.ac.kr).
+	}
+}
 
 \maketitle
 
+
+%==============================================================================
+%		Abstract
+%==============================================================================
+\begin{abstract}
+	Abstract... %TODO
+\end{abstract}
+
+
+%==============================================================================
+%		Keywords
+%==============================================================================
+\begin{IEEEkeywords}
+	Keywords... %TODO
+\end{IEEEkeywords}
+
+%==============================================================================
+%		Introduction
 %==============================================================================
 \section{Introduction}
-%==============================================================================
 
-Consider a class of linear systems as follows.
-\begin{equation}
-  \label{eq:system}
-  \dot{x} = A x + B u,\; x(0) = x_0
-\end{equation}
-Suppose that
-the system $(A, B)$ is controllable.
-The performance index
-for the Linear-Quadratic-Regulator (LQR) problem
-is given by
-\begin{equation}
-  J(x_0; u(\cdot)) = \int_0^\infty \frac{1}{2} \pqty{x^T Q x + u^T R u} \dd{t},
-\end{equation}
-where
-$(\sqrt{Q}, A)$ is detectable,
-and the matrix $R$ is positive definite.
+\IEEEPARstart{M}{odel-based} an be achieved even if residuals exist.
+\cite{anderson_exponential_1977}
 
-The purpose of this study is
-to find the optimal gain $K^\ast$ for the LQR problem,
-using an arbitrary exploration data
-which is a set of a tuple $(x, u, \dot{x})$.
-The exploration data can either be obtained
-from a single trajectory controlled by a human expert,
-or even collected from literally any data point $(x, u, \dot{x})$
-that satisfies the relation in~\eqref{eq:system}.
-
-An algorithm is \textit{off-policy}
-if it learns the optimal policy
-from this kind of exploration data.
-Several off-policy algorithms have been proposed
-to obtain $K^\ast$ for linear systems
-\cite{%
-yu_jiang_robust_2014,
-jiang_global_2015,
-jae_young_lee_integral_2015,
-vamvoudakis_q-learning_2017
-}.
-Most of these algorithms are based
-on a Kleinman algorithm~\cite{kleinman_iterative_1968},
-which requires an initial stabilizing policy
-as follows.
-
-\begin{thm}[Kleinman~\cite{kleinman_iterative_1968}]
-  Let $K_0$ be
-  any stabilizing feedback gain matrix,
-  and let $P_k$ be
-  the symmetric positive definite solution
-  of the Lyapunov equation given by
-  \begin{equation}
-    P_k (A - B K_k) + (A - B K_k)^T P_k + Q + K_k^T R K_k = 0,
-  \end{equation}
-  where $K_k$ is defined recursively by
-  \begin{equation}
-    K_k = R^{-1} B^T P_{k-1}.
-  \end{equation}
-  Then, the following properties hold.
-  \begin{enumerate}
-    \item $A - B K_k$ is Hurwitz,
-    \item $P^\ast \le P_{k+1} \le P_k$,
-    \item $\lim_{k\to\infty} = K^\ast$,
-      and $\lim_{k\to\infty} = P^\ast$.
-  \end{enumerate}
-\end{thm}
-
-Online learning methods
-which adapt the gain
-using the Hamilton-Jacobi-Bellman (HJB) error have been proposed
-to relax the requirement
-for the initial stabilizing policy~\cite{vamvoudakis_online_2010}.
-However,
-these methods only guarantee
-the UUB for gain errors,
-and the ultimate bound is too large
-to claim that
-the gain converges to the optimal gain.
 
 %==============================================================================
-\section{Problem Formulation}
+%		Acknowledgment
 %==============================================================================
+\section*{Acknowledgment}
 
-Let us consider the following linear system.
-\begin{equation}
-	\dot{x}(t) = A x(t) + B u(t), \; x(0) = x_0,
-\end{equation}
-where
-$x \in \mathbb{R}^n$ is the state vector,
-and
-$u \in \mathbb{R}^m$ is the input vector.
-The matrices $A$ and $B$
-with proper dimensions
-are unknowns. 
+This work was supported
+by a National Research Foundation of Korea (NRF)
+grant funded by the Korean government (MSIT)
+(No. 2019R1A2C208394612).
 
-The Linear Quadratic Regulator (LQR) finds
-a controller $u$
-that minimizes the following cost functional.
-\begin{equation}
-	J(x(0); u(\cdot))
-	= \int_0^\infty
-	\frac{1}{2} \pqty{{x(\tau)}^T Q x(\tau) + {u(\tau)}^T R u(\tau)} \dd{\tau},
-\end{equation}
-where
-$Q \in \mathbb{S}_+^n$
-and
-$R \in \mathbb{S}_{++}^m$ are fixed matrices.
-Assume that
-$\pqty{A, B}$ is controllable,
-and $\pqty{\sqrt{Q}, A}$ is detectable.
-It is well known that
-the optimal controller has
-a linear feedback form as
-$u^\ast(t) = - K x(t)$
-with the optimal gain $K = R^{-1} B^T P$,
-where
-$P \in \mathbb{S}_{++}^n$
-is the solution
-to the following algebraic Riccati equation.
-\begin{equation}
-  \label{eq:are}
-	P A + A^T P + Q - P B R^{-1} B^T P = 0.
-\end{equation}
-
-For the optimal gain $K$,
-consider the following
-control dynamics-augmented system.
-\begin{align}
-	\label{eq:augmented_system}
-	\dot{x} & = A x + B u,
-	\\
-	\dot{u} & = F u + F K x - K \pqty{Ax + Bu},
-\end{align}
-where
-the matrix $F \in \mathbb{R}^m$ is Hurwitz.
-
-\begin{lem}
-	For the augmented system~\eqref{eq:augmented_system},
-	the value function is given by
-	\begin{equation}
-		\mathcal{Q}(x, u)
-		= \frac{1}{2} x^T P x + \frac{1}{2} {(u + Kx)}^T G (u + Kx)
-	\end{equation}
-\end{lem}
-
-%==============================
-\section{Structured Q-Learning}
-%==============================
-
-Given a gain matrix $K$,
-consider the following
-control-dynamics-augmented system.
-\begin{align}
-  \dot{x} & = A x + B u, \\
-  \dot{u} & = F (u + K x) - K \pqty{A x + B u},
-\end{align}
-where $F$ is Hurwitz.
-This system is a virtual system
-that has no effect
-to the original system in~\eqref{eq:system}.
-Only the learning algorithm exploits this system.
-
-Let $\mathcal{Q}(x, u; K)$ denote
-the value function (Q-function)
-for the augmented system
-corresponding to the gain $K$,
-which satisfies the following Bellman equation.
-\begin{equation}
-  \label{eq:Bellman_equation}
-  {\grad_x \mathcal{Q}(x, u)}^T \dot{x}
-  + {\grad_u \mathcal{Q}(x, u)}^T \dot{u}
-  + \frac{1}{2} \pqty{x^T Q x + u^T R u} 
-  = 0.
-\end{equation}
-If 
-$\mathcal{Q}_k(x, u) \coloneqq \mathcal{Q}(x, u; K_k)$,
-the Q-function for the gain $K_k$,
-is structured as
-\begin{equation}
-  \mathcal{Q}_k(x, u)
-  =
-  \frac{1}{2}
-  \bmqty{x^T & u^T}
-  \bmqty{P_k^\prime & W_k^T \\ W_k & G_k}
-  \bmqty{x \\ u}
-  \eqqcolon
-  \frac{1}{2} z^T H_k z,
-\end{equation}
-where $z = [x^T, u^T]^T$,
-the Bellman equation
-in~\eqref{eq:Bellman_equation}
-can be written as follows.
-\begin{equation}
-  \label{eq:evaluation}
-  z^T H_k \bmqty{\dot{x} \\ F (u + K_k x) - K_k \dot{x}}
-  + \frac{1}{2} \pqty{x^T Q x + u^T R u} 
-  = 0.
-\end{equation}
-The variables
-$x$, $u$, $z$, $\dot{x}$, $F$, $K_k$, $Q$, and $R$
-are known,
-the solution $H_k$ can be found if it exists.
-Algorithm~\ref{alg:structured_q_learning}
-recursively solves for $H_k$
-and updates $K_k$
-which is hopefully guaranteed
-to converge to the optimal gain $K^\ast$
-without any knowledge of the system
-and the initial stabilizing policy.
-
-\begin{algorithm}
-  \caption{Structured Q-Learning}
-  \label{alg:structured_q_learning}
-  \begin{algorithmic}
-    \State Initialize the gain matrix $K_0$.
-    \State $k = 0$
-    \Repeat
-    \State Find the symmetric matrix $H_k$
-    using~\eqref{eq:evaluation}.
-    \Comment{Policy Evaluation}
-    \State Policy update: $K_{k+1} = {(H_k)}_{22}^{-1} {(H_k)}_{21}$.
-    \Comment{Policy Improvement}
-    \State $k \gets k + 1$
-    \Until{forever}
-  \end{algorithmic}
-\end{algorithm}
-
-Figure~\ref{fig:comparison:a}
-compares
-the existing method
-(Z. P. Jiang~\cite{jiang_global_2015})
-based on Kleinman algorithm
-and the proposed method
-for the initial stable policy,
-while
-Fig.~\ref{fig:comparison:b}
-shows the same comparison
-for the initial unstable policy.
-The data is collected
-from a single trajectory
-with arbitrarily oscillating control inputs.
-It can be seen that
-the two methods have same convergence
-when the initial policy is stable.
-However,
-for the unstable initial policy,
-the only proposed method
-converges to the optimal.
-
-\begin{figure}[!t]
-  \label{fig:comparison}
-	\centering
-  \subfloat[Stable initial policy\label{fig:comparison:a}]{%
-	\includegraphics[width=0.48\linewidth]{figure_1.pdf}}
-	\hfill
-  \subfloat[Unstable initial policy\label{fig:comparison:b}]{%
-	\includegraphics[width=0.48\linewidth]{figure_2.pdf}}
-	\caption{State, input, and parameter convergence histories.}
-\end{figure}
-
-%=============================
-\section{Convergence Analysis}
-%=============================
-
-The control gain is updated
-using the previous Q-function parameters as
-\begin{equation}
-  \label{eq:update_law}
-  K_{k+1} = {(H_k)}_{22}^{-1} {(H_k)}_{21}
-\end{equation}
-The evaluation step~\eqref{eq:evaluation} calculates
-the Q-function,
-which can be represented as
-the following matrix equation.
-\begin{equation}
-	\label{eq:ith_HJB_equation}
-	H_k {A_k} + {A_k}^T H_k + Q^\prime = 0,
-\end{equation}
-where
-\begin{equation}
-  \label{eq:Hk_def}
-	H_k = \bmqty{P_k^{\prime} & W_k^T \\ W_k & G_k}
-  \eqqcolon
-  \bmqty{(H_k)_{11} & (H_k)_{21}^T \\ (H_k)_{21} & (H_k)_{22}},
-  \quad
-  Q^\prime \coloneqq \bmqty{Q & 0 \\ 0 & R},
-\end{equation}
-and
-\begin{equation}
-  A_k
-  \coloneqq
-  \bmqty{A & B \\ F K_k - K_k A & F - K_k B}.
-\end{equation}
-
-To simplify the analysis,
-the matrix equation~\eqref{eq:ith_HJB_equation} is transformed
-using the following decompositions:
-\begin{equation}
-  \label{eq:Aiprime_def}
-  A_k
-  =
-  \bmqty{I & 0 \\ - K_k & I}
-  \bmqty{A - B K_k & B \\ 0 & F}
-  \bmqty{I & 0 \\ K_k & I},
-\end{equation}
-and
-\begin{equation}
-	\label{eq:Hi_def}
-	H_k
-	=
-  \bmqty{I & W_k^T {G_k}^{-1} \\ 0 & I} 
-	\bmqty{P_k & 0 \\ 0 & G_k}
-  \bmqty{I & 0 \\ {G_k}^{-1} W_k & I}
-	=
-	\bmqty{I & K_{k+1}^T \\ 0 & I} 
-	\bmqty{P_k & 0 \\ 0 & G_k}
-	\bmqty{I & 0 \\ K_{k+1} & I},
-\end{equation}
-where $P_k \coloneqq P_k^\prime - W_k^T G_k^{-1} W_k$,
-from Schur's decomposition.
-By substituting $A_k^\prime$ in~\eqref{eq:Aiprime_def}
-and $H_k^\prime$ in~\eqref{eq:Hi_def}
-into~\eqref{eq:ith_HJB_equation},
-we get
-\begin{equation}
-  \label{eq:rearranged_iteration}
-  \tilde{H}_k
-	\bmqty{A - B K_k & B \\ 0 & F}
-	+
-	\bmqty{\pqty{A - B K_k}^T & 0 \\ B^T & F^T}
-  \tilde{H}_k
-  +
-	\bmqty{I & -K_{k}^T \\ 0 & I}
-	Q^\prime
-	\bmqty{I & 0 \\ -K_k & I}
-  = 0
-\end{equation}
-where $\tilde{K}_i = K_{k+1} - K_k$,
-and
-\begin{align}
-  \label{eq:Htilde_def}
-  \tilde{H}_k
-  & =
-  \bmqty{I & \tilde{K}_{k}^T \\ 0 & I}
-  \bmqty{P_k & 0 \\ 0 & G_k}
-  \bmqty{I & 0 \\ \tilde{K}_{k} & I}
-  =
-  \bmqty{%
-    P_k + \tilde{K}_k^T G_k \tilde{K}_k & \tilde{K}_k^T G_k
-    \\
-    G_k \tilde{K}_k & G_k
-  }
-  \\
-  & \eqqcolon
-  \bmqty{%
-    (\tilde{H}_k)_{11} & (\tilde{H}_k)_{21}^T
-    \\
-    (\tilde{H}_k)_{21} & (\tilde{H}_k)_{22}
-  }.
-\end{align}
-Then,
-the update law~\eqref{eq:update_law} can be rewritten as
-\begin{equation}
-  K_{k+1} = K_k + {(\tilde{H}_k)}_{22}^{-1} {(\tilde{H}_k)}_{21}.
-\end{equation}
-
-\begin{figure}[!t]
-  \label{fig:comparison2}
-  \centering
-  \subfloat[Stable initial policy\label{fig:comparison2:a}]{%
-  \includegraphics[width=0.48\linewidth]{figure_3.pdf}}
-  \hfill
-  \subfloat[Unstable initial policy\label{fig:comparison2:b}]{%
-  \includegraphics[width=0.48\linewidth]{figure_4.pdf}}
-  \caption{Parameter convergence histories.}
-\end{figure}
-
-Rewrite the equation in~\eqref{eq:rearranged_iteration}
-using each block matrix of $\tilde{H}_k$ as
-\begin{gather}
-  \label{eq:block_1}
-  (\tilde{H}_k)_{11} (A - B K_k)
-  + (A - B K_k)^T (\tilde{H}_k)_{11}
-  + Q + K_k^T R K_k = 0,
-  \\
-  \label{eq:block_2}
-  (\tilde{H}_k)_{21} (A - B K_k) + B^T (\tilde{H}_k)_{11}
-  + F^T (\tilde{H}_k)_{21} - R K_k = 0,
-  \\
-  \label{eq:block_3}
-  (\tilde{H}_k)_{21} B + (\tilde{H}_k)_{22} F
-  + F^T (\tilde{H}_k)_{22} + B^T (\tilde{H}_k)_{21}^T + R = 0.
-\end{gather}
-Multiply
-$(\tilde{H}_k)_{21}^T (\tilde{H}_k)_{22}^{-1}$
-on the left hand side of~\eqref{eq:block_2} and~\eqref{eq:block_3},
-and
-multiply
-$(\tilde{H}_k)_{22}^{-1} (\tilde{H}_k)_{21}$
-on the right hand side of~\eqref{eq:block_3}.
-Then,
-by substituting both equations into~\eqref{eq:block_1},
-we have
-\begin{equation}
-  \label{eq:H11_k+1}
-  \mathcal{P}(\tilde{H}_k) (A - B K_{k+1})
-  + (A - B K_{k+1})^T \mathcal{P}(\tilde{H}_k) 
-  + Q + K_{k+1}^T R K_{k+1} = 0,
-\end{equation}
-where
-$\mathcal{P}(\tilde{H}_k)
-\coloneqq
-(\tilde{H}_k)_{11}
-- (\tilde{H}_k)_{21}^T (\tilde{H}_k)_{22}^{-1} (\tilde{H}_k)_{21}
-$.
-It can be observed
-that $\mathcal{P}(\tilde{H}_k) = (\tilde{H}_{k+1})_{11} = P_k$
-from~\eqref{eq:Htilde_def} and~\eqref{eq:block_1}.
-
-\begin{thm}
-  Suppose that
-  $(\sqrt{Q}, A)$ is observable, $Q \succeq 0$, and $R \succ 0$.
-  Let $H_k$, $k=0,1,\dotsc$, be
-  the solution to the Lyapunov equation~\eqref{eq:ith_HJB_equation}
-  where $K_0$ is chosen such that the matrix $A - BK_0$ is Hurwitz.
-  Then,
-  $P_k = (H_k)_{11} - (H_k)_{21}^T (H_k)_{22}^{-1} (H_k)_{21}^T$
-  satisfies
-  \begin{enumerate}
-    \item $\cdots \succeq P_k \succeq P_{k+1} \succeq \cdots \succ 0$
-    \item $\lim_{k\to\infty} P_k = P^\ast$
-      and $\lim_{k\to\infty} K_k = K^\ast$,
-      where $P^\ast$ is the maximal solution of~\eqref{eq:are},
-      and $K^\ast = R^{-1} B^T P^\ast$ is the stable optimal gain.
-  \end{enumerate}
-\end{thm}
-
-\begin{proof}
-  1) Let $K_k$ stabilize the system $(A, B)$.
-  Since $F$ is Hurwitz,
-  the augmented matrix
-  \begin{equation}
-    \tilde{A}_k \coloneqq \bmqty{A - B K_k & B \\ 0 & F}
-  \end{equation}
-  is also Hurwitz.
-  From the fact that
-  $X \succeq 0$ is equivalent to $S^T X S \succeq 0$
-  for any non-singular matrix $S$,
-  we have
-  \begin{equation}
-    \tilde{Q}_k
-    \coloneqq
-    \bmqty{I & -K_{k}^T \\ 0 & I}
-    \bmqty{Q & 0 \\ 0 & R}
-    \bmqty{I & 0 \\ -K_k & I}
-    \succeq 0.
-  \end{equation}
-  Then,
-  there exists a unique nonnegative solution $\tilde{H}_k$
-  to~\eqref{eq:rearranged_iteration}
-  \cite[Theorem 2.2]{snyders_nonnegative_1970}.
-  Moreover,
-  because the pair $(\tilde{Q}_k, \tilde{A}_k)$ is observable,
-  the solution $\tilde{H}_k$ is positive definite.
-  From the definition of $\tilde{H}_k$ in~\eqref{eq:Htilde_def},
-  $(\tilde{H}_k)_{11}
-  - (\tilde{H}_k)_{21}^T (\tilde{H}_k)_{22}^{-1} (\tilde{H}_k)_{21}
-  = P_k
-  \succ0$
-  and
-  $(\tilde{H}_k)_{22} = G_k \succ 0$.
-  From~\eqref{eq:H11_k+1},
-  $(\tilde{H}_{k+1})_{11}$ and $(\tilde{H}_{k})_{11}$ have
-  the following relation.
-  \begin{equation}
-    \label{eq:H11_relation}
-    (\tilde{H}_{k+1})_{11}
-    =
-    (\tilde{H}_k)_{11}
-    - (\tilde{H}_k)_{21}^T (\tilde{H}_k)_{22}^{-1} (\tilde{H}_k)_{21}
-    \succ 0,
-  \end{equation}
-  which implies that
-  $(\tilde{H}_k)_{11} \succeq (\tilde{H}_{k+1})_{11} = P_k \succ 0$.
-  Since
-  $\tilde{H}_{k+1} \succ 0$,
-  $\tilde{Q}_{k+1} \succeq 0$
-  and $(\tilde{Q}_{k+1}, \tilde{A}_{k+1})$ is observable,
-  from Lasalle's theorem,
-  the matrix $\tilde{A}_{k+1}$ is Hurwitz,
-  which implies that the gain $K_{k+1}$ is stabilizing.
-  By induction, we can complete the proof.
-
-  2) There exists $\lim_{k\to\infty} P_k = P_\infty$
-  and also $\lim_{k\to\infty} (\tilde{H}_k)_{11} = (\tilde{H}_\infty)_{11}$
-  from the monotonic convergence of positive operators%
-  ~\cite{riesz_functional_1990}.
-  By taking the limit $k\to\infty$ of~\eqref{eq:H11_relation},
-  we have $(\tilde{H}_\infty)_{21} = 0$
-  since $(\tilde{H}_\infty)_{22} \succ 0$,
-  which implies
-  $K_k = R^{-1} B^T (\tilde{H}_\infty)_{11}$
-  from~\eqref{eq:block_2}.
-  Then,
-  the limit of \eqref{eq:block_1}
-  turns out to be the algebraic Riccati equation
-  \begin{equation}
-    (\tilde{H}_\infty)_{11} A
-    + A^T (\tilde{H}_\infty)_{11}
-    + Q - (\tilde{H}_\infty)_{11} B R^{-1} B^T (\tilde{H}_\infty)_{11} = 0,
-  \end{equation}
-  where $A - B R^{-1} B (\tilde{H}_\infty)_{11}$ is Hurwitz,
-  which possess the unique positive-definite solution $P^\ast$.
-\end{proof}
-
-\begin{lem}
-  The equilibrium points of the iteration%
-  ~\eqref{eq:update_law} and~\eqref{eq:ith_HJB_equation}
-  are of the form
-  \begin{equation}
-    H = \bmqty{P + K^T G K & K^T G \\ G K & G},
-    \quad
-    K = R^{-1} B^T P,
-  \end{equation}
-  where $P$ can be any solution of
-  the following algebraic Riccati equation,
-  $P A + A^T P + Q - P B R^{-1} B^T P = 0$,
-  and $G$ is the unique positive definite solution of
-  the following Lyapunov equation,
-  $G F + F^T G + R = 0$.
-\end{lem}
-
-\begin{proof}
-  Let the control gain
-  at the equilibrium point be $K$.
-  Then, 
-  from~\eqref{eq:update_law} and~\eqref{eq:Hk_def},
-  the equilibrium point $H$ can be expressed as
-  \begin{equation}
-    H
-    =
-    \bmqty{P + K^T G K & K^T G \\ G K & G}
-    =
-    \bmqty{I & K^T \\ 0 & I} 
-    \bmqty{P & 0 \\ 0 & G}
-    \bmqty{I & 0 \\ K & I}.
-  \end{equation}
-  Using~\eqref{eq:Aiprime_def},
-  the matrix equation~\eqref{eq:ith_HJB_equation} turns out to be
-  \begin{equation}
-    \label{eq:proof:at_equilibrium}
-    \bmqty{P & 0 \\ 0 & G}
-    \bmqty{A - B K & B \\ 0 & F}
-    +
-    \bmqty{\pqty{A - B K}^T & 0 \\ B^T & F^T}
-    \bmqty{P & 0 \\ 0 & G}
-    +
-    \bmqty{I & -K^T \\ 0 & I}
-    Q^\prime
-    \bmqty{I & 0 \\ -K & I}
-    = 0.
-  \end{equation}
-  All the elements of~\eqref{eq:proof:at_equilibrium} are given by
-  \begin{gather}
-    P (A - B K) + (A - B K)^T P + Q + K^T R K = 0,
-    \\
-    P B - K^T R = 0,
-    \\
-    G F + F^T G + R = 0,
-  \end{gather}
-  which complete the proof.
-\end{proof}
-
-\begin{lem}
-  \label{lem:only_one_eq}
-  There is only one stabilizing equilibrium point.
-\end{lem}
-
-\begin{proof}
-  Suppose that $K_k = R^{-1} B^T P + E_k$,
-  where $P$ is a solution of the Riccati equation,
-  $PA + A^TP + Q - P B R^{-1} B^T P = 0$,
-  and $\norm{E_k} \ll 1$.
-  From~\eqref{eq:block_1},
-  the corresponding $(\tilde{H}_k)_{11}$
-  is the solution of 
-  \begin{equation}
-    \pqty\big{(\tilde{H}_k)_{11} - P} \pqty{A_c - B E_k}
-    + \pqty{A_c - B E_k}^T \pqty\big{(\tilde{H}_k)_{11} - P}
-    + E_k^T R E_k = 0,
-  \end{equation}
-  where $A_c \coloneqq A - B R^{-1} B^T P$.
-  The solution can be approximated to
-  $(\tilde{H}_k)_{11} \simeq P$
-  since $\norm{E_k} \ll 1$.
-  From~\eqref{eq:block_2},
-  the solution $(\tilde{H}_k)_{21}$ can also be approximated to
-  \begin{equation}
-    (\tilde{H}_k)_{21}
-    \simeq R E_k \pqty{A_c - s I - B E_k}^{-1}
-    \simeq R E_k \pqty{A_c - s I}^{-1}.
-  \end{equation}
-  Finally,
-  from~\eqref{eq:block_3},
-  \begin{align}
-    E_{k+1}
-    & = E_k + (\tilde{H}_k)_{22}^{-1} (\tilde{H}_k)_{21}
-    \\
-    & \simeq
-    E_k
-    + 2 s \pqty{R + (\tilde{H}_k)_{21} B + B^T (\tilde{H}_k)_{21}^T}
-    R E_k \pqty{A_c - s I}^{-1}
-    \\
-    & \simeq
-    E_k
-    + 2 s E_k \pqty{A_c - s I}^{-1}.
-    \\
-    & =
-    E_k \pqty{I + 2 s \pqty{A_c - s I}^{-1}}
-    \\
-    & =
-    E_k \pqty{A_c + s I} \pqty{A_c - s I}^{-1}
-    \eqqcolon E_k A_E.
-  \end{align}
-  Note that
-  since $s > 0$,
-  if $A_c$ has a positive eigenvalue,
-  the system matrix for $E_k$ has an eigenvalue
-  outside of a unit circle,
-  which implies that the system is unstable.
-  The fact that
-  there is only one matrix
-  in which all eigenvalues have
-  negative real parts
-  completes the proof.
-\end{proof}
-
-\begin{lem}
-  Given a matrix $K$
-  such that $A - BK$ and $-(A - BK)^T$ do not share any eigenvalues,
-  the matrix $K$ is
-  an equilibrium point of Kleinman iteration,
-  if and only if
-  $K = R^{-1} B^T P$ where
-  $P$ is a solution of
-  \begin{equation}
-    \label{eq:thm:ARE}
-    PA + A^T P + Q - P B R^{-1} B^T P = 0.
-  \end{equation}
-\end{lem}
-
-\begin{proof}
-  ($\Leftarrow$)
-  Let $K_k = K = R^{-1} B^T P$.
-  Then, $P_k$ is the unique symmetric solution of
-  \begin{equation}
-    \label{eq:proof:kleinman}
-    P_k (A - B K_k) + (A - B K_k)^T P_k + Q + K_k^T R K_k = 0,
-  \end{equation}
-  by Sylvester's theorem.
-  Since $P$ is a solution to~\eqref{eq:proof:kleinman},
-  we have $P_k = P$.
-  The updated gain of Kleinman iteration is given by
-  $K_{k+1} = R^{-1} B^T P_k = R^{-1} B^T P = K_k$,
-  which implies that $K$ is an equilibrium point.
-
-  ($\Rightarrow$)
-  Given $K_k = K$,
-  we have $K_{k+1} = R^{-1} B^T P_k$
-  from Kleinman iteration,
-  where $P_k$ is the unique solution to~\eqref{eq:proof:kleinman}.
-  Since $K$ is an equilibrium point,
-  $K_{k+1} = K_k = R^{-1} B^T P_k$.
-  Substituting $K_k$ into~\eqref{eq:proof:kleinman},
-  it is followed that
-  $P_k$ is a solution to~\eqref{eq:thm:ARE},
-  which completes the proof.
-\end{proof}
-
-\begin{lem}
-  For Kleinman iteration,
-  if $K_0$ is an unstable initial gain,
-  then the subsequent matrices
-  $A_k \coloneqq A - B K_k$, for $k=1, 2, \dotsc$, are all unstable.
-\end{lem}
-
-\begin{proof}
-  Suppose that $A_k$ is unstable.
-  From~\cite{wonham_linear_1985},
-  $\mathcal{L}_N(A_k, C_k) = \varnothing$,
-  where $C_k^T C_k = Q + K_k^T R K_k$.
-  Let $P_k \in \mathcal{L}(A_k, C_k)$,
-  then $P_k \in \mathcal{R}(A, B \sqrt{R^{-1}}, \tilde{C}_k)$,
-  where $\tilde{C}_k^T \tilde{C}_k = Q + \tilde{K}_k^T R \tilde{K}_k$,
-  because $K_{k+1} = R^{-1} B^T P_k$
-  from Kleinman iteration.
-  Suppose that $A_{k+1}$ is stable.
-  From~\cite[Lemma 4]{willems_least_1971},
-  there exists
-  a unique, positive semi-definite matrix
-  $P_k^\ast \in \mathcal{R}(A, B \sqrt{R^{-1}}, \tilde{C}_k)$.
-  However, since $\mathcal{L}_N(A_k, C_k) = \varnothing$,
-  $P_k \neq P_k^\ast$ which contradicts to the uniqueness.
-  Hence, $A_{k+1}$ is unstable,
-  and the proof is completed by induction.
-\end{proof}
-
-\begin{lem}
-  For $k = 0, 1, \dotsc$,
-  $\dim(\mathbb{E}_{\ge 0} (A - B K_k))$ is monotonically decreasing
-  under SQL.
-\end{lem}
-
-\begin{proof}
-  Suppose that
-  $\dim(\mathbb{E}_{\ge 0}(A - B K_k)) = r \le n$.
-  Since $F$ is Hurwitz,
-  $\dim(\mathbb{E}_{\ge 0}(\tilde{A}_k)) = r$,
-  which is followed by
-  $\dim(\mathbb{E}_{\le 0}(\tilde{H}_k)) = r$
-  from~\eqref{eq:rearranged_iteration}.
-  From the LDU decomposition in~\eqref{eq:Htilde_def},
-  we have
-  $\dim(\mathbb{E}_{\le 0}(P_k)) \le r$.
-  Using $P_k = (\tilde{H}_{k+1})_{11}$,
-  and from~\eqref{eq:block_1},
-  $\dim(\mathbb{E}_{\ge 0}(A_{k+1})) \le r$,
-  which completes the proof by induction.
-\end{proof}
-
-\begin{lem}
-  Suppose that $A - BK$ and $F$ do not share any eigenvalues
-  where $K = R^{-1} B^T P$ and $P \in \mathcal{R}(A, B\sqrt{R^{-1}}, C)$.
-  If $(\tilde{H}_0)_{21} \neq 0$,
-  then $(\tilde{H}_k)_{21} \neq 0$ for all $k \ge 1$.
-\end{lem}
-
-\begin{lem}
-  \label{lem:bounded_Ak_for_fat_B}
-  Suppose that
-  $B \in \mathbb{R}^{n \times m}$
-  is a fat matrix with full row rank.
-  If $(\tilde{H}_k)_{22} \succ 0$,
-  then the spectral radius $\rho(A_k)$ is bounded.
-\end{lem}
-
-\begin{proof}
-  Suppose that $v$ is an eigenvector of $A_k$
-  with respect to an eigenvalue $\lambda$
-  such that $\Re(\lambda) > 0$.
-  First,
-  we assume that
-  $n \le m$,
-  and
-  $B \in \mathbb{R}^{n \times m}$
-  has a full row rank.
-  From $B K_k v = (A - \lambda I)v$,
-  we have
-  \begin{equation}
-    K_k v = R^{-1} B^T (B R^{-1} B^T)^{-1} (A - \lambda I) v + z.
-  \end{equation}
-  where $z \in \ker(B)$.
-  Let
-  \begin{equation}
-    w = R^{-1} B^T (B R^{-1} B^T)^{-1} v + gz,
-  \end{equation}
-  where $g \in \mathbb{C}$.
-  Then,
-  we have $B w = v$.
-  Also, for the brevity,
-  let
-  \begin{equation}
-    D = (B R^{-1} B^T)^{-1},
-    \quad
-    C = B^T D.
-  \end{equation}
-  Note that $C^T z = 0$.
-  From~\eqref{eq:block_1},
-  \begin{align}
-    2 \lambda v^T (\tilde{H}_k)_{11} v
-    & =
-    - v^T \pqty{Q + K_k^T R K_k} v
-    \\
-    & =
-    - v^T Q v
-    - v^T (A - \lambda I)^T D (A - \lambda I) v
-    \\
-    & \quad
-    - 2 z^T C (A - \lambda I) v
-    - z^T R z
-    \\
-    & =
-    - v^T Q v
-    - v^T (A - \lambda I)^T D (A - \lambda I) v
-    - z^T R z.
-  \end{align}
-  From~\eqref{eq:block_2},
-  \begin{align}
-    (\lambda - s) w^T (\tilde{H}_k)_{21} v
-    & =
-    w^T R K_k v - v^T (\tilde{H}_k)_{11} v
-    \\
-    & =
-    v^T D (A- \lambda I) v
-    - v^T (\tilde{H}_k)_{11} v
-    \\
-    & \quad
-    + z^T C v
-    + g z^T C (A - \lambda I) v
-    + g z^T R z
-    \\
-    & =
-    v^T D (A- \lambda I) v
-    - v^T (\tilde{H}_k)_{11} v
-    + g z^T R z.
-  \end{align}
-  From~\eqref{eq:block_3},
-  \begin{align}
-    2s w^T (\tilde{H}_k)_{22} w
-    & =
-    w^T R w + w^T (\tilde{H}_k)_{21} v + v^T (\tilde{H}_k)_{21}^T w
-    \\
-    & =
-    v^T D v
-    + 2 g z^T C v
-    + g^2 z^T R z
-    \\
-    & \quad
-    + \frac{1}{\lambda (\lambda - s)} v^T \pqty{%
-      Q + (A - \lambda I)^T D (A - \lambda I)
-    } v
-    \\
-    & \quad
-    + \frac{1}{\lambda (\lambda - s)} v^T \pqty{%
-      \lambda D (A - \lambda I) + \lambda (A - \lambda I)^T D
-    } v
-    \\
-    & \quad
-    + \frac{2}{\lambda (\lambda - s)} z^T C (A - \lambda I) v
-    + \frac{1}{\lambda (\lambda - s)} z^T R z
-    \\
-    & \quad
-    + \frac{2}{\lambda - s} z^T \pqty{%
-      C + g C (A - \lambda I)
-    } v
-    + \frac{2 g}{\lambda - s} z^T R z.
-    \\
-    & =
-    \frac{1}{\lambda(\lambda - s)} v^T \pqty{Q + A^T D A - s \lambda D} v
-    \\
-    & \quad
-    + \pqty{%
-      g^2
-      + \frac{2 g}{\lambda - s}
-      + \frac{1}{\lambda (\lambda - s)}
-    } z^T R z.
-  \end{align}
-  Since $(\tilde{H}_k)_{22} \succ 0$,
-  we have
-  \begin{equation}
-    \frac{1}{\lambda - s} v^T \pqty{Q + A^T D A - s \lambda D} v > 0.
-  \end{equation}
-  and
-  \begin{equation}
-    g^2
-    + \frac{2 g}{\lambda - s}
-    + \frac{1}{\lambda (\lambda - s)}
-    > 0,
-  \end{equation}
-  which completes the proof.
-\end{proof}
-
-\begin{lem}
-  \label{lem:convergent_22_implies_eq}
-  If a sequence
-  $\lim_{k \to \infty} (\tilde{H}_k)_{11}$
-  is convergent,
-  then $\lim_{k \to \infty} \tilde{K}_k = 0$.
-\end{lem}
-
-\begin{proof}
-  Let
-  $D_k = (\tilde{H}_k)_{21} (\tilde{H}_k)_{22}^{-1} (\tilde{H}_k)_{21}$.
-  Since
-  \begin{equation}
-    (\tilde{H}_{k})_{11}
-    =
-    (\tilde{H}_0)_{11} - \sum_{l=0}^{k-1} D_l,
-  \end{equation}
-  the convergence of the sequence
-  $\lim_{k \to \infty} (\tilde{H}_k)_{11}$
-  implies that
-  a series
-  $\sum_{k=0}^{\infty} D_k$
-  is also convergent,
-  and hence,
-  $\lim_{k \to \infty} D_k = 0$.
-  Multiplying
-  $(\tilde{H}_k)_{22}^{-1} (\tilde{H}_k)_{21}$
-  and its transpose to
-  the both sides of~\eqref{eq:block_3},
-  we have
-  \begin{align}
-    \nonumber
-    2 s D_k
-    & =
-    (\tilde{H}_k)_{21}^T (\tilde{H}_k)_{22}^{-1}
-    R (\tilde{H}_k)_{22}^{-1} (\tilde{H}_k)_{21}
-    + D_k B (\tilde{H}_k)_{22}^{-1} (\tilde{H}_k)_{21}
-    + (\tilde{H}_k)_{21}^T (\tilde{H}_k)_{22}^{-1} B^T D_k
-    \\
-    \label{lem:tmp}
-    & =
-    \norm{(\tilde{H}_k)_{22}^{-1} (\tilde{H}_k)_{21} + R^{-1} B^T D_k}_R^2
-    - \norm{R^{-1} B^T D_k}_R^2.
-  \end{align}
-  Taking the limit of~\eqref{lem:tmp} as $k \to \infty$,
-  we can conclude that
-  $\lim_{k \to \infty} (\tilde{H}_k)_{22}^{-1} (\tilde{H}_k)_{21} = 0$,
-  which completes the proof.
-\end{proof}
-
-\begin{hypo}
-  \label{hypo:H11}
-  For any $K_k$ such that
-  $(\tilde{H}_k)_{22} \succ 0$,
-  there exists a scalar $\mu$ such that
-  $(\tilde{H}_k)_{11} \succ \mu I_n$.
-\end{hypo}
-
-If the above hypothesis is proved,
-we can conclude that
-for any $K_K$ such that $(\tilde{H}_k)_{22} \succ 0$,
-the matrix $(\tilde{H}_k)_{11}$ is lower bounded.
-Moreover,
-due to
-$D_k = (\tilde{H}_k)_{21}(\tilde{H}_k)_{22}^{-1}(\tilde{H}_k)_{21} \succ 0$,
-the limit of $(\tilde{H}_k)_{11}$ is convergent,
-and using Lemma~\ref{lem:convergent_22_implies_eq},
-we obtain $\lim_{k \to \infty} \tilde{K}_k = 0$.
-However,
-by Lemma~\ref{lem:only_one_eq},
-there is only one equilibrium point
-where the corresponding $A_k$ is stable.
-
-Since $A_k - s I$ is non-singular,
-there is $V_k$ such that
-$\pqty{A_k - s I} V_k = B$.
-Then,
-\begin{equation}
-  \pqty{A - s I} V_k = B \pqty{I + K_k V_k}.
-\end{equation}
-From~\eqref{eq:block_2},
-\begin{align}
-  0
-  & =
-  (\tilde{H}_k)_{21} \pqty{A_k - sI} V_k
-  + B^T (\tilde{H}_k)_{11} V_k - R K_k V_k
-  \\
-  & = 
-  (\tilde{H}_k)_{21} B
-  + V_k^T \pqty{A_k - s I}^T (\tilde{H}_k)_{11} V_k
-  - R K_k V_k.
-\end{align}
-From~\eqref{eq:block_3},
-\begin{align}
-  & R + (\tilde{H}_k)_{21} B + B^T (\tilde{H}_k)_{21}^T
-  \\
-  & =
-  R + R K_k V_k + V_k^T K_k^T R
-  \\
-  &
-  - V_k^T \pqty{(\tilde{H}_k)_{11} A_k + A_k^T (\tilde{H}_k)_{11}} V_k
-  + 2 s V_k^T (\tilde{H}_k)_{11} V_k.
-\end{align}
-From~\eqref{eq:block_1},
-\begin{align}
-  & R + (\tilde{H}_k)_{21} B + B^T (\tilde{H}_k)_{21}^T
-  \\
-  & =
-  R + R K_k V_k + V_k^T K_k^T R
-  + V_k^T \pqty{Q + K_k^T R K_k} V_k
-  \\
-  &
-  + 2 s V_k^T (\tilde{H}_k)_{11} V_k
-  \\
-  & =
-  V_k^T Q V_k
-  + \pqty{I + K_k V_k}^T R \pqty{I + K_k V_k}
-  + 2 s V_k^T (\tilde{H}_k)_{11} V_k
-  \\
-  & =
-  2 s V_k^T (\tilde{H}_k)_{11} V_k
-  + V_k^T Q V_k
-  \\
-  &
-  + \pqty{I + K_k V_k}^T B^T B \pqty{B^T B}^{-1}
-  R \pqty{B^T B}^{-1} B^T B \pqty{I + K_k V_k}
-  \\
-  & =
-  2 s V_k^T (\tilde{H}_k)_{11} V_k
-  + V_k^T Q V_k
-  \\
-  &
-  + V_k^T
-  \pqty{A - s I}^T B \pqty{B^T B}^{-1} R \pqty{B^T B}^{-1} B^T \pqty{A - s I}
-  V_k
-  \\
-  & =
-  2 s V_k^T (\tilde{H}_k)_{11} V_k + V_k^T Q_0 V_k,
-\end{align}
-where $
-Q_0
-\coloneqq
-Q
-+ \pqty{A - s I}^T B \pqty{B^T B}^{-1} R \pqty{B^T B}^{-1} B^T \pqty{A - s I}
-$,
-which is constant for all $k$.
-We can conclude that
-\begin{equation}
-  \lambda_{\min}\pqty\big{V_k^T (\tilde{H}_k)_{11} V_k}
-  \ge
-  - \lambda_{\max}\pqty{V_k^T Q_0 V_k}.
-\end{equation}
-If
-$V_k \in \mathbb{R}^{n \times m}$
-has full row rank,
-\begin{equation}
-  \lambda_{\min}\pqty\big{(\tilde{H}_k)_{11}}
-  \ge
-  - \lambda_{\max}\pqty{Q_0},
-\end{equation}
-which implies Hypothesis~\ref{hypo:H11}.
-% From the definition of $V_k$,
-% we have
-% \begin{equation}
-%   \pqty{A_{k+1} - s I} V_{k + 1} = B = \pqty{A_{k} - s I} V_k.
-% \end{equation}
-% Rearranging the above equation gives
-% \begin{equation}
-%   V_k \pqty{I + \tilde{K}_k V_{k+1}}
-%   = V_{k+1}
-%   = \pqty{I - V_k \tilde{K}_k}^{-1} V_k.
-% \end{equation}
-% Hence, if $\pqty{I + \tilde{K}_k V_{k+1}}$ is non-singular,
-% $V_k$ has the same column spaces for all $k$.
-
-However,
-it is still difficult to prove the hypothesis
-when $V_k$ has full column rank.
-
-\begin{proof}
-  Since $(\tilde{H}_k)_{11}$ is non-singular,
-  there is $V_k$ such that
-  $V_k^T (\tilde{H}_k)_{11} = (\tilde{H}_k)_{21}$.
-  From~\eqref{eq:block_2},
-  \begin{equation}
-    \label{eq:tmp1}
-    B^T (\tilde{H}_k)_{11} V_k
-    =
-    R K_k V_k
-    - V_k^T (\tilde{H}_k)_{11} \pqty{A_k - sI} V_k
-  \end{equation}
-  From~\eqref{eq:block_3},
-  \begin{equation}
-    2 s (\tilde{H}_k)_{22}
-    = R + V_k^T (\tilde{H}_k)_{11} B + B^T (\tilde{H}_k)_{11}^T V_k
-  \end{equation}
-  Substituting~\eqref{eq:tmp1},
-  \begin{align}
-    2 s (\tilde{H}_k)_{22}
-    & =
-    R + R K_k V_k + V_k^T K_k^T R
-    \\
-    &
-    - V_k^T (\tilde{H}_k)_{11} \pqty{A_k - sI} V_k
-    - V_k^T \pqty{A_k - sI}^T (\tilde{H}_k)_{11} V_k
-    \\
-    & =
-    R + R K_k V_k + V_k^T K_k^T R
-    \\
-    &
-    - V_k^T \pqty{(\tilde{H}_k)_{11} A_k + A_k^T (\tilde{H}_k)_{11}} V_k
-    + 2 s V_k^T (\tilde{H}_k)_{11} V_k.
-  \end{align}
-  From~\eqref{eq:block_1},
-  \begin{equation}
-    (\tilde{H}_k)_{22} - V_k^T (\tilde{H}_k)_{11} V_k
-    =
-    \frac{1}{2s} \pqty{
-      \pqty{I + K_k V_k}^T R \pqty{I + K_k V_k}
-      + V_k^T Q V_k
-    }.
-  \end{equation}
-  From~\eqref{eq:Htilde_def},
-  \begin{align}
-    \bmqty{%
-      (\tilde{H}_k)_{11} & (\tilde{H}_k)_{21}^T
-      \\
-      (\tilde{H}_k)_{21} & (\tilde{H}_k)_{22}
-    }
-    & =
-    \bmqty{I & \tilde{K}_{k}^T \\ 0 & I}
-    \bmqty{%
-      (\tilde{H}_k)_{11} - \tilde{K}_k^T (\tilde{H}_k)_{22} \tilde{K}_k & 0
-      \\
-      0 & (\tilde{H}_k)_{22}
-    }
-    \bmqty{I & 0 \\ \tilde{K}_{k} & I}
-    \\
-    & =
-    \bmqty{I & 0 \\ V_k^T & I}
-    \bmqty{%
-      (\tilde{H}_k)_{11} & 0
-      \\
-      0 & (\tilde{H}_k)_{22} - V_k^T (\tilde{H}_k)_{11} V_k
-    }
-    \bmqty{I & V_k \\ 0 & I}
-  \end{align}
-\end{proof}
-
-
-\subsection{Tall Case Analysis}
-
-For tall matrices
-$B \in \mathbb{R}^{n \times m}$ where $n > m$,
-we introduce an auxiliary state vector
-$z \in \mathbb{R}^{\bar{m}}$
-satisfying
-$u = C z$
-where the matrix
-$C \in \mathbb{R}^{m \times \bar{m}}$
-has full row rank with $\bar{m} \ge n$.
-Let $C^\dagger$ be a Moor-Penrose psuedo-inverse
-defined by
-$C^\dagger = C^T \pqty{C C^T}^{-1}$.
-Then,
-the state vector $z$ can be constructed from the input vector $u$,
-as $z = C^\dagger u$.
-
-Now consider the following dynamics.
-\begin{equation}
-  \dot{z}
-  =
-  F \pqty{z + C^\dagger K x} - C^\dagger K \dot{x}.
-\end{equation}
-This is an invalid analysis
-since the matrix $BC$ has rank $m$ not $n$.
 
 \bibliographystyle{IEEEtran}
-\bibliography{manuscript}
+\bibliography{mybib}
+
+% % Generated by IEEEtran.bst, version: 1.14 (2015/08/26)
+% \begin{thebibliography}{10}
+% \providecommand{\url}[1]{#1}
+% \providecommand{\newblock}{\relax}
+% \providecommand{\bibinfo}[2]{#2}
+% \providecommand{\BIBentrySTDinterwordspacing}{\spaceskip=0pt\relax}
+% \providecommand{\BIBentryALTinterwordstretchfactor}{4}
+% \providecommand{\BIBdecl}{\relax}
+% \BIBdecl
+
+% \bibitem{astrom_adaptive_1987}
+% K.~J. Astrom, ``Adaptive feedback control,'' \emph{Proc. IEEE}, vol.~75, no.~2,
+%   pp. 185--217, 1987.
+
+% \bibitem{slotine_composite_1989}
+% J.-J.~E. Slotine and W.~Li, ``Composite adaptive
+% control of robot manipulators,'' \emph{Automatica},
+%   vol.~25, no.~4, pp. 509--519, 1989.
+
+% \bibitem{slotine_applied_1991}
+% J.-J. Slotine and W.~Li, \emph{Applied Nonlinear
+% Control}. {Prentice Hall}, {Englewood Cliffs, NJ}, 1991.
+
+% \bibitem{anderson_exponential_1977}
+% B.~Anderson, ``Exponential stability of linear equations arising in adaptive
+%   identification,'' \emph{IEEE Trans. Autom. Control}, vol.~22, no.~1, pp.
+%   83--88, 1977.
+
+% \bibitem{nguyen_optimal_2008}
+% N.~Nguyen, K.~Krishnakumar, and J.~Boskovic, ``An
+% optimal control modification to model-reference adaptive control for fast
+% adaptation,'' in \emph{{{AIAA Guidance}},
+% {{Navigation}} and {{Control Conference}}}, {Honolulu, HI}, Aug. 2008.
+
+% \bibitem{boyd_necessary_1986}
+% S.~Boyd and S.~Sastry, ``Necessary and sufficient conditions for parameter
+%   convergence in adaptive control,'' \emph{Automatica}, vol.~22, no.~6, pp.
+%   629--639, 1986.
+
+% \bibitem{yucelen_derivative-free_2011}
+% T.~Yucelen and A.~J. Calise, ``Derivative-free model
+% reference adaptive control,'' \emph{J. Guid. Control
+% Dyn.}, vol.~34, no.~4, pp. 933--950, 2011.
+
+% \bibitem{duarte_combined_1989}
+% M.~A. Duarte and K.~S. Narendra, ``Combined direct and indirect approach to
+%   adaptive control,'' \emph{IEEE Trans. Autom. Control}, vol.~34, no.~10, pp.
+%   1071--1075, 1989.
+
+% \bibitem{lavretsky_combined/composite_2009}
+% E.~Lavretsky, ``Combined/composite model reference adaptive control,''
+%   \emph{IEEE Trans. Autom. Control}, vol.~54, no.~11, pp. 2692--2697, 2009.
+
+% \bibitem{lavretsky_predictor-based_2010}
+% E.~Lavretsky, R.~Gadient, and I.~M. Gregory,
+% ``Predictor-based model reference adaptive
+% control,'' \emph{J. Guid. Control Dyn.}, vol.~33,
+%   no.~4, pp. 1195--1201, 2010.
+
+% \bibitem{song_adaptive_2017}
+% Y.~Song, K.~Zhao, and M.~Krstic, ``Adaptive control with exponential regulation
+%   in the absence of persistent excitation,'' \emph{IEEE Trans. Autom. Control},
+%   vol.~62, no.~5, pp. 2589--2596, 2017.
+
+% \bibitem{kim_mismatch-observer_2017}
+% S.-h. Kim and Y.~Kim, ``Mismatch-observer based model reference adaptive
+%   control for transient performance improvement of aircraft,'' in \emph{{{AIAA
+%   Guidance}}, {{Navigation}}, and {{Control Conference}}}.\hskip 1em plus 0.5em
+%   minus 0.4em\relax {Grapevine, TX}: {American Institute of Aeronautics and
+%   Astronautics}, Jan. 2017.
+
+% \bibitem{gibson_adaptive_2013}
+% T.~E. Gibson, A.~M. Annaswamy, and E.~Lavretsky, ``On adaptive control with
+%   closed-loop reference models: Transients, oscillations, and peaking,''
+%   \emph{IEEE Access}, vol.~1, pp. 703--717, 2013.
+
+% \bibitem{yucelen_low-frequency_2013}
+% T.~Yucelen and W.~M. Haddad, ``Low-frequency learning and fast adaptation in
+%   model reference adaptive control,'' \emph{IEEE Trans. Autom. Control},
+%   vol.~58, no.~4, pp. 1080--1085, 2013.
+
+% \bibitem{yucelen_improving_2014}
+% T.~Yucelen, G.~D.~L. Torre, and E.~N. Johnson,
+% ``Improving transient performance of adaptive control
+% architectures using frequency-limited system error dynamics,''
+%   \emph{Int. J. Control}, vol.~87, no.~11, pp.
+%   2383--2397, 2014.
+
+% \bibitem{kamalapurkar_model-based_2016}
+% R.~Kamalapurkar, P.~Walters, and W.~E. Dixon,
+% ``Model-based reinforcement learning for approximate
+% optimal regulation,'' \emph{Automatica}, vol.~64,
+%   pp. 94--104, 2016.
+
+% \bibitem{chowdhary_concurrent_2013}
+% G.~Chowdhary, T.~Yucelen, M.~M{\"u}hlegg, and E.~N. Johnson,
+% ``{Concurrent learning adaptive control of
+% linear systems with exponentially convergent bounds},''
+% \emph{International Journal of Adaptive
+% Control \& Signal Processing}, vol.~27, no.~4, pp. 280--301, 2013.
+
+% \bibitem{chowdhary_concurrent_2010}
+% G.~Chowdhary and E.~Johnson, ``Concurrent learning for convergence in adaptive
+%   control without persistency of excitation,'' in \emph{49th {{IEEE
+%   Conference}} on {{Decision}} and {{Control}} ({{CDC}})}, {Atlanta, GA}, Dec.
+%   2010.
+
+% \bibitem{chowdhary_exponential_2014}
+% G.~Chowdhary, M.~M{\"u}hlegg, and E.~Johnson, ``Exponential parameter and
+%   tracking error convergence guarantees for adaptive controllers without
+%   persistency of excitation,'' \emph{Int. J. Control}, vol.~87, no.~8, pp.
+%   1583--1603, 2014.
+
+% \bibitem{chowdhary_singular_2011}
+% G.~Chowdhary and E.~Johnson, ``A singular value maximizing data recording
+%   algorithm for concurrent learning,'' in \emph{Proceedings of the 2011
+%   {{American Control Conference}}}, {San Francisco, CA}, Jun. 2011.
+
+% \bibitem{pan_composite_2018}
+% Y.~Pan and H.~Yu, ``Composite learning robot control with guaranteed parameter
+%   convergence,'' \emph{Automatica}, vol.~89, pp. 398--406, 2018.
+
+% \bibitem{cho_composite_2018}
+% N.~Cho, H.~Shin, Y.~Kim, and A.~Tsourdos, ``Composite model reference adaptive
+%   control with parameter convergence under finite excitation,'' \emph{IEEE
+%   Trans. Autom. Control}, vol.~63, no.~3, pp. 811--818, 2018.
+
+% \bibitem{nadler_finite_2008}
+% B.~Nadler, ``Finite sample approximation results for
+% principal component analysis: {{A}} matrix perturbation approach,''
+% 	\emph{Ann. Statist.}, vol.~36, no.~6, pp.
+% 	2791--2817, Dec. 2008.
+
+% \bibitem{ipsen_refined_2009}
+% I.~C.~F. Ipsen and B.~Nadler, ``Refined perturbation
+% bounds for eigenvalues of hermitian and non-hermitian matrices,''
+%   \emph{SIAM J. Matrix Anal. Appl.}, vol.~31, no.~1,
+%   pp. 40--53, 2009.
+
+% \bibitem{lavretsky_robust_2013}
+% E.~Lavretsky and K.~Wise, \emph{Robust and {{Adaptive
+% Control}}: {{With Aerospace Applications}}}, ser. Advanced {{Textbooks}} in
+% 	{{Control}} and {{Signal Processing}}. {Springer-Verlag}, {London}, 2013.
+
+% \bibitem{paternain_online_2017}
+% S.~Paternain and A.~Ribeiro, ``Online learning of feasible strategies in
+%   unknown environments,'' \emph{IEEE Trans. Autom. Control}, vol.~62, no.~6,
+%   pp. 2807--2822, 2017.
+
+% \bibitem{bauschke_convex_2011}
+% H.~H. Bauschke and P.~L. Combettes, \emph{Convex Analysis and Monotone Operator
+%   Theory in {{Hilbert}} Spaces}, ser. {{CMS}} Books in Mathematics.\hskip 1em
+%   plus 0.5em minus 0.4em\relax {New York}: {Springer}, 2011.
+
+% \bibitem{khalil_nonlinear_2002}
+% H.~K. Khalil, \emph{Nonlinear Systems}, 3rd~ed.
+% {Prentice Hall}, {Upper Saddle River, NJ}, 2002.
+
+% \bibitem{belsley_regression_1980}
+% D.~A. Belsley, E.~Kuh, and R.~E. Welsch, \emph{Regression diagnostics:
+% 	identifying influential data and sources of collinearity}, ser. Wiley series
+% 	in probability and mathematical statistics. {Wiley}, {NY}, 1980.
+
+% \bibitem{elzebda_development_1989}
+% J.~M. Elzebda, A.~H. Nayfeh, and D.~T. Mook,
+% ``Development of an analytical model of wing rock for
+% slender delta wings,'' \emph{Journal of Aircraft},
+%   vol.~26, no.~8, pp. 737--743, 1989.
+
+% \end{thebibliography}
+
+\begin{IEEEbiography}
+	[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{SKim.jpg}}]
+	{Seong-hun Kim}
+	received the B.S. degree
+	in Mechanical and Aerospace Engineering
+	from Seoul National University,
+	the Republic of Korea,
+	in February 2015,
+	where he is currently pursuing the Ph.D. degree.
+	His current research interests include
+	robust adaptive control based on online parameter learning,
+	machine learning applications for flight control,
+	and data-driven optimal control and trajectory optimization for UAVs.
+\end{IEEEbiography}
+
+\begin{IEEEbiography}
+	[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{YKim.pdf}}]
+	{Youdan Kim} (M'94--SM'16)
+	received the B.S. and M.S. degrees
+	in Aeronautical Engineering
+	from Seoul National University,
+	the Republic of Korea,
+	in 1983 and 1985, respectively,
+	and a Ph.D. in Aerospace Engineering
+	from Texas A\&M University in 1990.
+	He joined the Faculty of Seoul National University in 1992,
+	where he is currently a professor at the Department of Aerospace Engineering.
+	His current research interests include
+	nonlinear flight control, reconfigurable control, path planning,
+	and guidance techniques for aerospace applications.
+\end{IEEEbiography}
 
 \end{document}

@@ -1,0 +1,44 @@
+\ProvidesPackage{mystyle}
+
+% Packages
+% ========
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{textcomp}
+\usepackage{algorithmic}
+
+\usepackage{mathtools}
+\usepackage{physics}
+\usepackage{bbm}
+\usepackage{booktabs,multirow}
+\usepackage{siunitx}
+\sisetup{table-figures-exponent=1, table-sign-exponent=true}
+\sisetup{group-separator={,}}
+
+%-------------------------------------------------------------------------------
+%		Graphicsx
+%-------------------------------------------------------------------------------
+\usepackage{graphicx}
+\graphicspath{{./img/}}
+
+%------------------------------------------------------------------------------
+%		AMS Theorems
+%------------------------------------------------------------------------------
+\newtheorem{thm}{Theorem}
+\newtheorem{lem}{Lemma}
+\newtheorem{cor}{Corollary}
+\newtheorem{prop}{Proposition}
+
+\newtheorem{defi}{Definition}
+\newtheorem{prob}{Problem}
+\newtheorem{exam}{Example}
+\newtheorem{alg}{Algorithm}
+\newtheorem{ass}{Assumption}
+
+\newtheorem{remark}{Remark}
+\newtheorem{note}{Note}
+
+%------------------------------------------------------------------------------
+%		Macros
+%------------------------------------------------------------------------------
+\DeclarePairedDelimiterX{\inner}[2]{\langle}{\rangle}{#1, #2}
