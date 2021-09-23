@@ -18,8 +18,8 @@
 \begin{document}
 
 \title{%
-	Data-Efficient Active Weighting Algorithm
-	for Composite Adaptive Control Systems
+	Policy Iteration for Continuous-Time Linear Systems with Initial 
+	Non-Admissible Policies
 }
 \author{%
 	Seong-hun~Kim,
@@ -60,13 +60,733 @@
 	Keywords... %TODO
 \end{IEEEkeywords}
 
+
 %==============================================================================
 %		Introduction
 %==============================================================================
 \section{Introduction}
+\label{sec:introduction}
 
 \IEEEPARstart{M}{odel-based} an be achieved even if residuals exist.
-\cite{anderson_exponential_1977}
+
+\section{Preliminaries} 
+
+The inertia of a matrix $A \in \mathrm{R}^{n \times n}$,
+denoted by $\mathrm{In}(A)$, is defined as
+the ordered triple $(\pi(A), \nu(A), \zeta(A))$
+of which the elements are, respectively,
+the number of eigenvalues of $A$ with
+positive, negative, and zero real parts.
+
+Given two matrices
+$A \in \mathbb{R}^{n \times n}$ and $B \in \mathbb{R}^{n \times m}$,
+a matrix pair $(A, B)$ is called controllable if
+$\mathrm{rank}(\mathcal{C}(A, B)) = n$,
+where $\mathcal{C}(A, B)$ denotes the controllability matrix defined by
+\begin{equation}
+	\mathcal{C}(A, B) = \bqty{B, AB, A^2 B, \dotsc, A^{n-1} B}.
+\end{equation}
+
+\begin{proposition}
+	\label{prop:controllability}
+	Let $A \in \mathbb{R}^{n \times n}$ and $B \in \mathbb{R}^{n \times m}$.
+	The followings are equivalent:
+	\begin{enumerate}[(a)]
+		\item $(A, B)$ is controllable;
+    \item $(S_1 A S_1^{-1}, S_1 B S_2) + c (I, 0)$ is controllable
+      for any scalars $c \in \mathbb{R}$
+      and non-singular matrices
+      $S_1 \in \mathbb{R}^{n \times n}$
+      and $S_2 \in \mathbb{R}^{m \times m}$;
+		\item $(A^{-1}, B)$ is controllable if $A$ is invertible.
+	\end{enumerate}
+\end{proposition}
+
+\begin{proof}
+	(a) and (b) are direct results from~\cite[Theorem 1.1]{fung_linear_1996}.
+	For (c), the matrix $A$ has full rank because it is invertible.
+	Hence, we have
+	\begin{equation}
+		\mathrm{rank}(\mathcal{C}(A, B))
+		= \mathrm{rank}((A^{-1})^{n - 1} \cdot \mathcal{C}(A, B))
+		= \mathrm{rank}(\mathcal{C}(A^{-1}, B)),
+	\end{equation}
+	which completes the proof.
+\end{proof}
+
+Define an auxiliary matrix $\bar{A}$ as follows.
+\begin{equation}
+  \label{eq:Abar}
+  \bar{A} = (A + sI)(A - sI)^{-1},
+\end{equation}
+for any $s > 0$ such that $A - sI$ is invertible.
+The following lemma is a direct consequence of
+Proposition~\ref{prop:controllability}.
+
+\begin{lemma}
+  \label{lem:A_and_Abar_controllability}
+  The matrix pair $(A, B)$ is controllable,
+  if and only if $(\bar{A}, B)$ is controllable.
+\end{lemma}
+
+\begin{proof}
+  Note that $\bar{A} = I + 2s (A - sI)^{-1}$.
+  Using Proposition~\ref{prop:controllability}, we have
+  \begin{align*}
+    n
+    & = \mathrm{rank}\pqty{\mathcal{C}(A, B)} \\
+    & = \mathrm{rank}\pqty{\mathcal{C}(A - sI, B)} \\
+    & = \mathrm{rank}\pqty{\mathcal{C}\pqty{I + 2s(A - sI)^{-1}, B}} \\
+    & = \mathrm{rank}\pqty{\mathcal{C}\pqty{\bar{A}, B}},
+  \end{align*}
+  which completes the proof.
+\end{proof}
+
+\section{Problem Formulation}
+
+Consider the following class of continuous-time linear systems.
+\begin{equation}
+	\label{eq:linear_system}
+	\dot{x} = A x + B u, \quad x(0) = x_0,
+\end{equation}
+where $x(t) \in \mathcal{X} \coloneqq \mathbb{R}^n$
+and $u(t) \in \mathcal{U} \coloneqq \mathbb{R}^m$ are
+state vector and control input vector
+at time $t \in \mathcal{T} \coloneqq [0, \infty)$,
+respectively,
+and $A$ and $B$ are the corresponding system matrices with proper dimensions.
+
+The control input function $u : \mathcal{T} \to \mathcal{U}$
+drives the system according to the dynamics~\eqref{eq:linear_system},
+where the notion of the optimal control arises
+based on an index, called \textit{performance index}
+that evaluates the resulting state and control input history
+derived from the control input function $u$ and the initial state $x_0$.
+One of the most widely used performance index for linear systems
+is a functional defined by the following quadratic terms.
+\begin{equation}
+	\label{eq:typical_value_function}
+	v_\infty(x_0; u) = \int_0^\infty r(x(t), u(t)) \dd{t},
+	\; \forall x_0 \in \mathcal{X},
+\end{equation}
+where the local cost function
+$r : \mathcal{X} \times \mathcal{U} \to \mathrm{R}$
+is defined by
+\begin{equation}
+	\label{eq:local_cost_function}
+	r(x, u) = x^T Q x + u^T R u.
+\end{equation}
+The two matrices $Q$ and $R$ are
+positive semi-definite and positive-definite matrices,
+respectively, with proper dimensions.
+With the positive-definite local cost function $r$,
+the value function defined in~\eqref{eq:typical_value_function}
+may not be well-defined when, for example,
+the control input function $u$ leads the system unstable.
+To resolve this problem,
+let us introduce a slightly different definition of a performance index,
+or a value function, which is any function
+that satisfies the following equation.
+\begin{equation}
+	\label{eq:new_value_function}
+	v(x_0; u) - v(x(T); u) = \int_0^T r(x(t), u(t)) \dd{t},
+	\; \forall x_0 \in \mathcal{X},
+	\; \forall T \in \mathcal{T},
+\end{equation}
+where $v(0) = 0$.
+It can be easily seen that the uniqueness of a function $v$ can be guaranteed,
+and also, for an asymptotically stable control input,
+the value function $v$ is indeed $v_\infty$.
+
+Furthermore, for any feedback control input $u = - K x$
+that makes the closed-loop system matrix $A - BK$ Hurwitz,
+the value function $v_\infty(x) = x^T P x$ for all $x \in \mathcal{X}$,
+where $P$ is a solution to the following
+Lyapunov equation~\cite{anderson_optimal_2007}.
+\begin{equation}
+	\label{eq:Lyapunov_equation}
+	\mathcal{L}(P) \coloneqq P (A - B K) + (A - B K)^T P + Q + K^T R K = 0,
+\end{equation}
+where $\mathcal{L}$ denotes the Lyapunov operator.
+
+By extending the concept of the value function
+as shown in~\eqref{eq:new_value_function},
+similar Lyapunov equation can be defined for any feedback control input
+that may not stabilize the system,
+which are the same as~\eqref{eq:Lyapunov_equation}
+but can have indefinite $P$ as the solution.
+
+\begin{proposition}
+	For a feedback gain $K$ such that
+	$A - B K$ and $B K - A$ do not share any eigenvalue,
+	the corresponding value function defined in~\eqref{eq:new_value_function}
+	is $v(x) = x^T P x$ where $P$ is the unique solution to
+	the Lyapunov equation~\eqref{eq:Lyapunov_equation}.
+\end{proposition}
+
+\begin{proof}
+	Suppose that there exists a matrix $P$ such that
+	\begin{equation}
+		\label{eq:proof:aux1}
+		x(0)^T P x(0) - x(T)^T P x(T) =
+		\int_0^T x(t)^T \pqty{Q + K^T R K} x(t) \dd{t},
+	\end{equation}
+	for all $x(0) \in \mathcal{X}$, and for all $T \in \mathcal{T}$.
+	By using the state transition matrix defined by
+	\begin{gather}
+		\Phi(t) = \exp{(A - BK) t}, \; \forall t \in \mathcal{T},
+		\\
+		\quad \Phi(0) = I,
+	\end{gather}
+	the equation~\eqref{eq:proof:aux1} can be rewritten
+	in the following matrix form.
+	\begin{equation}
+		P - \Phi(T)^T P \Phi(T)
+		= \int_0^T \Phi(t)^T \pqty{Q + K^T R K} \Phi(t) \dd{t}. 
+	\end{equation}
+	Using $\Phi(t) (A - B K) = (A - B K) \Phi(t) = \dv{t} \Phi(t)$,
+	we have
+	\begin{align}
+		& \pqty{P - \Phi(T)^T P \Phi(T)} (A - B K)
+		+ (A - B K)^T \pqty{P - \Phi(T)^T P \Phi(T)}
+		\\
+		& = \int_0^T \dv{t} \pqty\Big{\Phi(t)^T \pqty{Q + K^T R K} \Phi(t)} \dd{t}
+		\\
+		& = \Phi(T)^T \pqty{Q + K^T R K} \Phi(T) - \pqty{Q + K^T R K}.
+	\end{align}
+	Rearranging the above equation using the fact that
+	the inverse of a state transition matrix always exists,
+	we have the following Sylvester equation.
+	\begin{align}
+		\label{eq:proof:Sylvester_equation}
+		\mathcal{L}(P) \Phi^{-1}(T) - \Phi(T)^T \mathcal{L}(P) = 0.
+	\end{align}
+	The Sylvester equation~\eqref{eq:proof:Sylvester_equation}
+	has a solution other than the trivial $\mathcal{L}(P) = 0$,
+	if and only if the two matrices $\Phi^{-1}(T)$ and $\Phi^T(T)$
+	share one or more eigenvalues.
+	Let the common eigenvalue be $\lambda$,
+	and the corresponding eigenvectors
+	for each $\Phi^{-1}(T)$ and $\Phi^T(T)$ be $y$ and $w$, respectively.
+	From the definitions, we have
+	\begin{gather}
+		w^T y = w^T \Phi(T) \Phi^{-1}(T) y = \lambda^2 w^T y,
+		\\
+		w^H y = w^H \Phi(T) \Phi^{-1}(T) y = \norm{\lambda}^2 w^H y.
+	\end{gather}
+	The above two equations imply that
+	$\Phi(T)$ has an eigenvalue $\lambda = 1$.
+	Hence, $A - BK$ has a zero eigenvalue,
+	which contradicts to $A - BK$ and $BK - A$ do not share any eigenvalue.
+	Hence, the Sylvester equation~\eqref{eq:proof:Sylvester_equation}
+	has only the trivial solution $\mathcal{L}(P) = 0$,
+	which completes the proof.
+\end{proof}
+
+
+%==============================================================================
+%		Kleinman Iteration for ADP
+%==============================================================================
+\section{Kleinman Iteration for ADP}
+
+It is well-known that for time-invariant linear systems,
+the infinite-time horizon optimal control input has a state-feedback form as
+\begin{equation}
+	u^\ast(x) = - K^\ast x, \; \forall x \in \mathcal{X},
+\end{equation}
+where $K^\ast = R^{-1} B^T P^\ast$
+and $P^\ast$ is the unique positive-definite matrix
+among the solutions of the following algebraic Riccati equation.
+\begin{equation}
+	\label{eq:Riccati_equation}
+	\mathcal{R}(P) \coloneqq P A + A^T P + Q - P B^T R^{-1} B P = 0,
+\end{equation}
+where $\mathcal{R}$ denotes the Riccati operator.
+It has been proved that the positive-definite matrix $P^\ast$
+satisfying $\mathcal{R}(P^\ast) = 0$ exists, and is unique. %TODO: Ref
+Furthermore, the closed-loop system matrix, $A - B K^\ast$, is Hurwitz,
+and the corresponding value function can be expressed as
+$v_\infty(x) = v(x) = x^T P^\ast x$.
+The main difficulty of obtaining the optimal control input $u^\ast$
+There are two difficulties to directly obtain
+the optimal control input $u^\ast$.
+The first is the requirements of full knowledge of the system dynamics,
+i.e., the system matrices $A$ and $B$,
+to solve~\eqref{eq:Riccati_equation},
+and the second is that even if $A$ and $B$ are given,
+it is difficult to solve the equation~\eqref{eq:Riccati_equation}
+because the equation itself is a quadratic equation of $P$.
+
+ADP methods use the Kleinman iteration and large amounts of data
+to solve these problems surprisingly effectively%
+~\cite{%
+yu_jiang_robust_2014,
+jiang_global_2015,
+jae_young_lee_integral_2015,
+vamvoudakis_q-learning_2017
+}.
+If the method uses integrated information rather than $\dot{x}$,
+it is called an integral RL (IRL),
+and depending on the authors, a method using $\dot{x}$
+is sometimes called a model-based method.
+However, the information of $\dot{x}$ is different
+from the knowledge of $A$ and $B$,
+so this paper distinguishes the method that requires $\dot{x}$
+from the model-based method that require $A$ and $B$ both. %TODO: polish
+
+The Kleinman iteration iteratively solves a series of Lyapunov equations%
+~\eqref{eq:Lyapunov_equation}~\cite{kleinman_iterative_1968}
+to asymptotically obtain $P^\ast$.
+These Lyapunov equations are linear equations
+of $P$, so they are much easier to solve than the Riccati equations.
+The convergence of the Kleinman iteration is
+ensured by the following Lemma.
+
+\begin{lemma}[Kleinman~\cite{kleinman_iterative_1968}]
+  Let $K_0$ be any stabilizing feedback gain matrix,
+  and let $P_k$ be the symmetric positive definite solution
+  of the Lyapunov equation given by
+  \begin{equation}
+		\label{eq:Kleinman_evaluation}
+    P_k (A - B K_k) + (A - B K_k)^T P_k + Q + K_k^T R K_k = 0,
+  \end{equation}
+  for all $k = 0, 1, \dotsc$,
+	where $K_k$ is defined recursively by
+  \begin{equation}
+		\label{eq:Kleinman_improvement}
+    K_k = R^{-1} B^T P_{k-1}, \; \forall k = 1, 2, \dotsc.
+  \end{equation}
+  Then, the following properties hold.
+  \begin{enumerate}
+    \item $A - B K_k$ is Hurwitz,
+    \item $P^\ast \le P_{k+1} \le P_k$,
+    \item $\lim_{k\to\infty} K_k = K^\ast$,
+      and $\lim_{k\to\infty} P_k = P^\ast$.
+  \end{enumerate}
+\end{lemma}
+
+ADP methods utilize exploration data obtained by applying a control input
+to the system to calculate $P_k$ in~\eqref{eq:Kleinman_evaluation}.
+Suppose that the control input $u$ is applied.
+Then, by multiplying $x^T$ and $x$ on both sides
+of~\eqref{eq:Kleinman_evaluation}, we have
+\begin{equation}
+	\label{eq:evaluation_with_partial_knowledge}
+	2 x^T P_k \dot{x} - 2 x^T P_k B \pqty{u + K_k x}
+	+ x^T \pqty{Q + K_k^T R K_k} x = 0,
+\end{equation}
+where $K_k$ is given from the previous iteration step.
+This formulation requires the knowledge of $B$ to calculate $K_{k+1}$ and $P_k$
+from~\eqref{eq:Kleinman_improvement}
+and~\eqref{eq:evaluation_with_partial_knowledge}, respectively.
+Using $K_{k+1} = R^{-1} B^T P_k$,
+the equation~\eqref{eq:evaluation_with_partial_knowledge}
+can be rewritten as
+\begin{equation}
+	\label{eq:evaluation_model_free}
+	2 x^T P_k \dot{x} - 2 x^T K_{k+1} R^{-1} \pqty{u + K_k x}
+	+ x^T \pqty{Q + K_k^T R K_k} x = 0,
+\end{equation}
+where $P_k$ and $K_{k+1}$ are obtained simultaneously
+without any knowledge of the system dynamics, i.e., $A$ and $B$.
+
+Despite the successful development of ADP methods,
+the main drawback of them is the requirements of the initial admissible policy.
+When a non-admissible initial policy is used,
+the Kleinman iteration can never be converged to the optimal control input.
+
+\begin{lemma}
+  For Kleinman iteration,
+  if $K_0$ is an unstable initial gain,
+  then the subsequent closed-loop system matrices,
+  $A_k \coloneqq A - B K_k$, for all $k=1, 2, \dotsc$, are all unstable.
+\end{lemma}
+
+\begin{proof}
+  Suppose that $A_k$ is unstable.
+  From~\cite{wonham_linear_1985},~
+  $\mathcal{L}_N(A_k, C_k) = \varnothing$,
+  where $C_k^T C_k = Q + K_k^T R K_k$.
+  Let $P_k \in \mathcal{L}(A_k, C_k)$,
+  then $P_k \in \mathcal{R}(A, B \sqrt{R^{-1}}, \tilde{C}_k)$,
+  where $\tilde{C}_k^T \tilde{C}_k = Q + \tilde{K}_k^T R \tilde{K}_k$,
+  because $K_{k+1} = R^{-1} B^T P_k$
+  from Kleinman iteration.
+  Suppose that $A_{k+1}$ is stable.
+  From~\cite[Lemma 4]{willems_least_1971},
+  there exists
+  a unique, positive semi-definite matrix
+  $P_k^\ast \in \mathcal{R}(A, B \sqrt{R^{-1}}, \tilde{C}_k)$.
+  However, since $\mathcal{L}_N(A_k, C_k) = \varnothing$,
+  $P_k \neq P_k^\ast$ which contradicts to the uniqueness.
+  Hence, $A_{k+1}$ is unstable,
+  and the proof is completed by induction.
+\end{proof}
+
+
+\section{Non-Admissible Kleinman Iteration}
+
+This section introduces a novel modification of the Kleinman iteration
+that allows non-admissible initial gain matrices.
+Consider the following extended form of
+the Lyapunov equation~\eqref{eq:Lyapunov_equation}
+for an arbitrary $K_k$ for all $k \ge 0$.
+\begin{equation}
+	\label{eq:extended_Lyapunov_equation}
+	\bmqty{P_k & W_k^T \\ W_k & G_k}
+	\bmqty{A_k & B \\ 0 & - s I}
+	+
+	\bmqty{A_k & B \\ 0 & - s I}^T
+	\bmqty{P_k & W_k^T \\ W_k & G_k}
+	+
+	\bmqty{Q + K_k^T R K_k & -K_k^T R \\ - R K_k  & R}
+	= 0,
+\end{equation}
+where
+\begin{equation}
+	A_k \coloneqq A - B K_k,
+\end{equation}
+and the scalar $s > 0$ is a design parameter.
+Note that the equation~\eqref{eq:extended_Lyapunov_equation}
+has a unique solution $(P_k, W_k, G_k)$
+if and only if the following assumption is satisfied.
+\begin{assumption}
+	\label{ass:for_sylvester}
+	The matrices $A_k$ and $-A_k$ do not share any eigenvalues
+	and the scalar $s$ is not an eigenvalue of $A_k$ for all $k = 0, 1, \dotsc$.
+\end{assumption}
+
+With Assumption~\ref{ass:for_sylvester},
+it is guaranteed that for all $k \ge 0$,
+the matrix $G_k$ is invertible,
+and $\pi(A_k) = \nu(P_k)$%
+~\cite[Theorem 4.2]{datta_stability_1999}.
+Consider the following update law of the gain matrix.
+\begin{equation}
+	\label{eq:sql_update}
+	K_{k+1} = K_{k} + G_{k}^{-1} W_{k}.
+\end{equation}
+From~\eqref{eq:extended_Lyapunov_equation}
+and~\eqref{eq:sql_update},
+it can be observed that $P_{k+1}$ is the Schur complement
+of the matrix $G_k$ as follows.
+\begin{equation}
+	\label{eq:P_relation}
+	P_{k+1} = P_k - W_k^T G_k^{-1} W_k.
+\end{equation}
+
+\begin{lemma}
+	\label{lem:monotonic_decreasing}
+	Under the iteration~\eqref{eq:extended_Lyapunov_equation}
+	and~\eqref{eq:sql_update}
+	with Assumption~\ref{ass:for_sylvester},
+	$\pi(A_{k+1}) = \pi(A_k) - \nu(G_k)$ for all $k \ge 0$.
+\end{lemma}
+
+\begin{proof}
+	Suppose that
+	$\pi(A_k) = r \le n$.
+	From~\eqref{eq:extended_Lyapunov_equation}
+	and Theorem 4.2 of~\cite{datta_stability_1999},
+	we have
+	\begin{equation}
+		\nu\pqty{\bmqty{P_k & W_k^T \\ W_k & G_k}}
+		=
+		\nu\pqty{-\bmqty{A_k & B \\ 0 & -sI_m}}
+		= \nu(-A_k) = r,
+	\end{equation}
+	which is followed by $\nu(P_{k+1}) = r - \nu(G_k)$
+	using Haynsworth's inertia theorem%
+	~\cite[Theorem 1]{haynsworth_determination_1968}
+	with~\eqref{eq:P_relation}.
+	Because $P_k$ and $A_k$ satisfy the following relation
+	from~\eqref{eq:extended_Lyapunov_equation}
+	for all $k \ge 0$,
+	\begin{equation}
+		P_k A_k + A_k^T P_k + Q + K_k^T R K_k = 0,
+	\end{equation}
+	we can complete the proof with
+	$\pi(A_{k+1}) = \nu(P_{k+1}) = r - \nu(G_k)$.
+\end{proof}
+
+\begin{remark}
+	Lemma~\ref{lem:monotonic_decreasing} states that
+	$\pi(A_k)$ is monotonically decreasing,
+	and is strictly decreasing whenever $\nu(G_k) > 0$.
+	In other words,
+	the closed-loop system matrix $A_k$ is Hurwitz
+	for all $k \ge N$,
+	if there exists a finite integer $N \ge 0$ such that
+	\begin{equation}
+		\sum_{k=0}^N \nu(G_k) = \pi(A_0),
+	\end{equation}
+	for any initial gain matrix $K_0$.
+\end{remark}
+
+Under Assumption~\ref{ass:for_sylvester},
+define an auxiliary matrix as
+\begin{equation}
+	\label{eq:Vk}
+	V_k \coloneqq (A_k - sI)^{-1} B,
+\end{equation}
+for all $k \ge 0$.
+Note that for any two auxiliary matrices $V_i$ and $V_j$,
+the following relation is satisfied.
+\begin{equation}
+	V_i (K_i - K_j) V_j = V_j (K_i - K_j) V_i = V_i - V_j,
+\end{equation}
+which implies that $\mathrm{Im}(V_i) = \mathrm{Im}(V_j)$.
+In other words, all $V_k$'s have the same image space
+denoted by $\mathcal{V}$.
+Substituting~\eqref{eq:Vk} to
+the Lyapunov equation~\eqref{eq:extended_Lyapunov_equation}
+yields the following equation.
+\begin{align}
+	\label{eq:Gk_relation}
+	G_k = V_k^T \pqty{P_k + \bar{Q}} V_k,
+\end{align}
+where
+\begin{equation}
+	\bar{Q} = \frac{1}{2s} \pqty{%
+		Q + \pqty{A - s I}^T {B^\dagger}^T R B^\dagger \pqty{A - s I}
+	},
+\end{equation}
+and $B^\dagger$ is the Moore-Penrose pseudo-inverse of $B$.
+
+Now, we can prove the following Lemma using
+Proposition~\ref{prop:controllability}
+and Lemma~\ref{lem:A_and_Abar_controllability}.
+
+\begin{lemma}
+  \label{lem:1}
+	Under the iteration~\eqref{eq:extended_Lyapunov_equation}
+	and~\eqref{eq:sql_update}
+	with Assumption~\ref{ass:for_sylvester},
+  there exists a finite integer $k \ge 0$ such that
+	$\nu(G_k) > 0$ for any $K_{0}$.
+\end{lemma}
+
+\begin{proof}
+	Suppose that $\nu(G_k) = 0$,
+	or equivalently, $G_k \succeq 0$ for all $k \ge 0$.
+	From~\eqref{eq:P_relation} and~\eqref{eq:Gk_relation},
+	and from the fact that $V_k$'s have the same image space $\mathcal{V}$
+	for all $k \ge 0$,
+	we have
+	\begin{equation}
+		V^T \pqty{P_0 + \bar{Q} - \sum_{k=0}^{\infty} D_k } V \succeq 0,
+	\end{equation}
+	where $D_k \coloneqq W_k^T G_k^{-1} W_k = \tilde{K}_k^T G_k \tilde{K}_k$.
+	It follows that
+	\begin{equation}
+		0
+		\le \trace\pqty{\sum_{k=0}^{\infty} V^T D_k V}
+		= \sum_{k=0}^\infty \trace \pqty{V^T D_k V}
+		\le  c,
+	\end{equation}
+	where
+	$c \coloneqq \trace\pqty{V^T \pqty{P_0 + \bar{Q}} V} \ge 0$ is constant,
+	which implies the following from the monotone convergence theorem.
+	\begin{equation}
+		\label{eq:proof:VDkV_zero}
+		\lim_{k \to \infty} \trace\pqty{V^T D_k V}
+		= \lim_{k \to \infty} \sum_{i=1}^m \lambda_{i} \pqty{V^T D_k V}
+		= 0,
+	\end{equation}
+	where $\lambda_i(A)$ denotes the $i$-th eigenvalue of a square matrix $A$.
+	Because the matrix $V D_k V$ is positive semi-definite,
+	\eqref{eq:proof:VDkV_zero} is equivalent to
+	\begin{alignat}{2}
+		& \lambda_i \pqty{\lim_{k \to \infty} V^T D_k V} = 0,
+		& & \quad \forall i = 1, 2, \dotsc, m
+		\\
+		\iff
+		& \lim_{k \to \infty} V^T D_k V = 0
+		& &
+		\\
+		\iff
+		& y^T \pqty{\lim_{k \to \infty} V^T D_k V} y = 0,
+		& & \quad \forall y \in \mathbb{R}^m
+		\\
+		\iff
+		&
+		x^T \pqty{\lim_{k \to \infty} D_k} x = 0,
+	  & & \quad \forall x \in \mathcal{V},
+	\end{alignat}
+	which implies that
+	$\mathcal{V} \subset \mathrm{Null} \pqty{\lim_{k \to \infty} D_k}$,
+	and hence,
+	\begin{equation}
+		\label{eq:proof:Dk_limit}
+		\pqty{\lim_{k \to \infty} D_k} x = 0,
+		\quad \forall x \in \mathcal{V}.
+	\end{equation}
+
+	Rearranging~\eqref{eq:extended_Lyapunov_equation} yields
+	\begin{equation}
+		2 s D_k
+		=
+		\norm{\tilde{K}_k + R^{-1} B^T D_k}_R^2
+		- \norm{R^{-1} B^T D_k}_R^2,
+	\end{equation}
+	which implies that from~\eqref{eq:proof:Dk_limit},
+	\begin{equation}
+		\pqty{\lim_{k \to \infty} \tilde{K}_k} x = 0,
+		\quad \forall x \in \mathcal{V}.
+	\end{equation}
+
+	From~\eqref{eq:extended_Lyapunov_equation}
+	and~\eqref{eq:sql_update},
+	\begin{equation}
+		W_{k+1} \pqty{A_{k+1} - sI} = W_k \pqty{A_{k+1} + sI}.
+	\end{equation}
+	Multiplying $V_{k+1}$ on the both sides yields
+	\begin{equation}
+		\pqty{W_{k+1} - W_k} B
+		= R B^\dagger (A - sI) (V_{k+1} - V_k)
+		= 2s W_k V_{k+1},
+	\end{equation}
+	and
+	\begin{equation}
+		W_{k+1} (A - sI) - W_k (A + sI)
+		= 2s W_k V_{k+1} K_{k+1}
+	\end{equation}
+
+
+	\begin{align}
+		W_{k} (A - sI)
+		& = R K_k - B^T P_{k} + W_{k} B K_{k}
+		\\
+		& = R K_{k+1} - R \tilde{K}_k - B^T P_{k+1}
+		- B^T W_k^T G_k^{-1} W_k + W_{k} B K_{k}
+		\\
+		& = W_{k+1} (A - sI) - W_{k+1} B K_{k+1}
+		- R \tilde{K}_k - B^T W_k^T \tilde{K}_k + W_{k} B K_{k}
+		\\
+		& = W_{k+1} (A - sI) - W_{k+1} B K_{k+1}
+		- R \tilde{K}_k - B^T W_k^T \tilde{K}_k + W_{k} B K_{k} \\
+		& = 
+	\end{align}
+	we have the following relations.
+  \begin{equation}
+    \label{eq:proof:1}
+    \lim_{k \to \infty}(\tilde{H}_k)_{21} \pqty{\bar{A}^i - I} B = 0,
+    \quad \forall i \ge 1,
+  \end{equation}
+  where $\bar{A}$ is defined in~\eqref{eq:Abar}.
+  Because $(\bar{A}, B)$ is controllable by Lemma~\ref{lem:A_and_Abar_controllability},
+  and from the fact that
+  $(A - sI)^{-1} \bar{A} (A - sI) = \bar{A}$,
+  we have the following relation from Proposition~\ref{prop:controllability}.
+  \begin{equation}
+    \mathrm{rank}(\mathcal{C}(\bar{A}, B))
+    = \mathrm{rank}(\mathcal{C}(\bar{A}, (A - sI)^{-1} B)).
+  \end{equation}
+  Moreover, for all $i \ge 1$,
+  \begin{equation}
+    \label{eq:proof:2}
+    \bar{A}^i - I = 2s \pqty{\sum_{j=0}^{i-1} \bar{A}^j}(A - sI)^{-1}.
+  \end{equation}
+  Define a matrix $C$ and a block upper triangular matrix $U$ as follows.
+  \begin{align}
+    C & \coloneqq \bmqty{%
+      (\bar{A} - I) B & (\bar{A}^2 - I) B & \cdots & (\bar{A}^n - I) B
+    },
+    \\
+    U & \coloneqq \bmqty{
+      I_m & I_m & \cdots & I_m
+      \\
+          & I_m & \cdots & \vdots
+      \\
+          &     & \ddots & \vdots
+      \\
+      0   &     &        & I_m
+    }.
+  \end{align}
+  From~\eqref{eq:proof:2}, we have
+  \begin{equation}
+    \mathrm{rank}(C)
+    = \mathrm{rank}(\mathcal{C}(\bar{A}, (A - sI)^{-1} B) \cdot U)
+    = n,
+  \end{equation}
+  which implies that $\lim_{k\to\infty}(\tilde{H}_k)_{21} = 0$
+  from~\eqref{eq:proof:1}.
+  The convergence of $(\tilde{H}_k)$ to zero implies that
+  the convergence of $K_k$ from Lemma~4 of %TODO.
+  However, from Lemma~5 of %TODO,
+  there is only one equilibrium point $K^\ast$, which makes $A - B K$ Hurwitz.
+  Hence, by contradiction, the proof is completed.
+\end{proof}
+
+\begin{theorem}
+	Let $K_0$ be any matrix,
+	and $(P_k, W_k, G_k)$ be the symmetric solution
+	of the Lyapunov equation~\eqref{eq:extended_Lyapunov_equation}
+	for all $k = 0, 1, \dotsc$,
+	where $K_k$ is determined recursively by~\eqref{eq:sql_update}
+	for all $k = 1, 2, \dotsc$.
+	Then, there exists a finite integer $N \ge 0$ such that
+	the following properties hold for all $k \ge N$.
+	\begin{enumerate}
+		\item $A - B K_k$ is Hurwitz,
+		\item $P^\ast \le P_{k+1} \le P_k$,
+		\item $\lim_{k\to\infty} K_k = K^\ast$,
+			and $\lim_{k\to\infty} P_k = P^\ast$.
+	\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+\end{proof}
+
+
+
+%==============================================================================
+%		Structured Q-Learning
+%==============================================================================
+\section{Structured Q-Learning}
+
+This section introduces a novel iteration that does not requires
+the initial admissible policy,
+and expands the iteration to the ADP for completely unknown systems.
+
+\begin{theorem}
+	Let $K_0$ be any matrix,
+	and let $H_k$ be the symmetric definite solution
+	of the Lyapunov equation given by
+	\begin{equation}
+		H_k F_k + F_k^T H_k + M = 0,
+	\end{equation}
+	where
+	\begin{equation}
+		F_k \coloneqq \pmqty{A & B \\ - s K_k - s K_k A & - s I_m - K_k B},
+		\;
+		M \coloneqq \pmqty{Q & 0 \\ 0 & R},
+	\end{equation}
+	and $s > 0$, for all $k = 0, 1, \dotsc$,
+	and $K_k$ is defined recursively by
+	\begin{equation}
+		K_k = (H_{k-1})_{22}^{-1} (H_{k-1})_{21}, \; \forall k = 1, 2, \dotsc
+	\end{equation}
+	where the matrix $H_k$ is partitioned as
+	\begin{equation}
+		H_k \eqqcolon \pmqty{(H_k)_{11} & (H_k)_{21}^T \\ (H_k)_{21} & (H_k)_{22}}.
+	\end{equation}
+	Then, there exists a finite integer $N \ge 0$ such that
+	the following properties hold for all $k \ge N$.
+	\begin{enumerate}
+		\item $A - B K_k$ is Hurwitz,
+		\item $P^\ast \le P_{k+1} \le P_k$,
+		\item $\lim_{k\to\infty} K_k = K^\ast$,
+			and $\lim_{k\to\infty} P_k = P^\ast$.
+	\end{enumerate}
+\end{theorem}
+
+
+\section{Controllability}
+
+
+
+\section{Convergence}
 
 
 %==============================================================================
@@ -83,181 +803,10 @@ grant funded by the Korean government (MSIT)
 \bibliographystyle{IEEEtran}
 \bibliography{mybib}
 
-% % Generated by IEEEtran.bst, version: 1.14 (2015/08/26)
-% \begin{thebibliography}{10}
-% \providecommand{\url}[1]{#1}
-% \providecommand{\newblock}{\relax}
-% \providecommand{\bibinfo}[2]{#2}
-% \providecommand{\BIBentrySTDinterwordspacing}{\spaceskip=0pt\relax}
-% \providecommand{\BIBentryALTinterwordstretchfactor}{4}
-% \providecommand{\BIBdecl}{\relax}
-% \BIBdecl
-
-% \bibitem{astrom_adaptive_1987}
-% K.~J. Astrom, ``Adaptive feedback control,'' \emph{Proc. IEEE}, vol.~75, no.~2,
-%   pp. 185--217, 1987.
-
-% \bibitem{slotine_composite_1989}
-% J.-J.~E. Slotine and W.~Li, ``Composite adaptive
-% control of robot manipulators,'' \emph{Automatica},
-%   vol.~25, no.~4, pp. 509--519, 1989.
-
-% \bibitem{slotine_applied_1991}
-% J.-J. Slotine and W.~Li, \emph{Applied Nonlinear
-% Control}. {Prentice Hall}, {Englewood Cliffs, NJ}, 1991.
-
-% \bibitem{anderson_exponential_1977}
-% B.~Anderson, ``Exponential stability of linear equations arising in adaptive
-%   identification,'' \emph{IEEE Trans. Autom. Control}, vol.~22, no.~1, pp.
-%   83--88, 1977.
-
-% \bibitem{nguyen_optimal_2008}
-% N.~Nguyen, K.~Krishnakumar, and J.~Boskovic, ``An
-% optimal control modification to model-reference adaptive control for fast
-% adaptation,'' in \emph{{{AIAA Guidance}},
-% {{Navigation}} and {{Control Conference}}}, {Honolulu, HI}, Aug. 2008.
-
-% \bibitem{boyd_necessary_1986}
-% S.~Boyd and S.~Sastry, ``Necessary and sufficient conditions for parameter
-%   convergence in adaptive control,'' \emph{Automatica}, vol.~22, no.~6, pp.
-%   629--639, 1986.
-
-% \bibitem{yucelen_derivative-free_2011}
-% T.~Yucelen and A.~J. Calise, ``Derivative-free model
-% reference adaptive control,'' \emph{J. Guid. Control
-% Dyn.}, vol.~34, no.~4, pp. 933--950, 2011.
-
-% \bibitem{duarte_combined_1989}
-% M.~A. Duarte and K.~S. Narendra, ``Combined direct and indirect approach to
-%   adaptive control,'' \emph{IEEE Trans. Autom. Control}, vol.~34, no.~10, pp.
-%   1071--1075, 1989.
-
-% \bibitem{lavretsky_combined/composite_2009}
-% E.~Lavretsky, ``Combined/composite model reference adaptive control,''
-%   \emph{IEEE Trans. Autom. Control}, vol.~54, no.~11, pp. 2692--2697, 2009.
-
-% \bibitem{lavretsky_predictor-based_2010}
-% E.~Lavretsky, R.~Gadient, and I.~M. Gregory,
-% ``Predictor-based model reference adaptive
-% control,'' \emph{J. Guid. Control Dyn.}, vol.~33,
-%   no.~4, pp. 1195--1201, 2010.
-
-% \bibitem{song_adaptive_2017}
-% Y.~Song, K.~Zhao, and M.~Krstic, ``Adaptive control with exponential regulation
-%   in the absence of persistent excitation,'' \emph{IEEE Trans. Autom. Control},
-%   vol.~62, no.~5, pp. 2589--2596, 2017.
-
-% \bibitem{kim_mismatch-observer_2017}
-% S.-h. Kim and Y.~Kim, ``Mismatch-observer based model reference adaptive
-%   control for transient performance improvement of aircraft,'' in \emph{{{AIAA
-%   Guidance}}, {{Navigation}}, and {{Control Conference}}}.\hskip 1em plus 0.5em
-%   minus 0.4em\relax {Grapevine, TX}: {American Institute of Aeronautics and
-%   Astronautics}, Jan. 2017.
-
-% \bibitem{gibson_adaptive_2013}
-% T.~E. Gibson, A.~M. Annaswamy, and E.~Lavretsky, ``On adaptive control with
-%   closed-loop reference models: Transients, oscillations, and peaking,''
-%   \emph{IEEE Access}, vol.~1, pp. 703--717, 2013.
-
-% \bibitem{yucelen_low-frequency_2013}
-% T.~Yucelen and W.~M. Haddad, ``Low-frequency learning and fast adaptation in
-%   model reference adaptive control,'' \emph{IEEE Trans. Autom. Control},
-%   vol.~58, no.~4, pp. 1080--1085, 2013.
-
-% \bibitem{yucelen_improving_2014}
-% T.~Yucelen, G.~D.~L. Torre, and E.~N. Johnson,
-% ``Improving transient performance of adaptive control
-% architectures using frequency-limited system error dynamics,''
-%   \emph{Int. J. Control}, vol.~87, no.~11, pp.
-%   2383--2397, 2014.
-
-% \bibitem{kamalapurkar_model-based_2016}
-% R.~Kamalapurkar, P.~Walters, and W.~E. Dixon,
-% ``Model-based reinforcement learning for approximate
-% optimal regulation,'' \emph{Automatica}, vol.~64,
-%   pp. 94--104, 2016.
-
-% \bibitem{chowdhary_concurrent_2013}
-% G.~Chowdhary, T.~Yucelen, M.~M{\"u}hlegg, and E.~N. Johnson,
-% ``{Concurrent learning adaptive control of
-% linear systems with exponentially convergent bounds},''
-% \emph{International Journal of Adaptive
-% Control \& Signal Processing}, vol.~27, no.~4, pp. 280--301, 2013.
-
-% \bibitem{chowdhary_concurrent_2010}
-% G.~Chowdhary and E.~Johnson, ``Concurrent learning for convergence in adaptive
-%   control without persistency of excitation,'' in \emph{49th {{IEEE
-%   Conference}} on {{Decision}} and {{Control}} ({{CDC}})}, {Atlanta, GA}, Dec.
-%   2010.
-
-% \bibitem{chowdhary_exponential_2014}
-% G.~Chowdhary, M.~M{\"u}hlegg, and E.~Johnson, ``Exponential parameter and
-%   tracking error convergence guarantees for adaptive controllers without
-%   persistency of excitation,'' \emph{Int. J. Control}, vol.~87, no.~8, pp.
-%   1583--1603, 2014.
-
-% \bibitem{chowdhary_singular_2011}
-% G.~Chowdhary and E.~Johnson, ``A singular value maximizing data recording
-%   algorithm for concurrent learning,'' in \emph{Proceedings of the 2011
-%   {{American Control Conference}}}, {San Francisco, CA}, Jun. 2011.
-
-% \bibitem{pan_composite_2018}
-% Y.~Pan and H.~Yu, ``Composite learning robot control with guaranteed parameter
-%   convergence,'' \emph{Automatica}, vol.~89, pp. 398--406, 2018.
-
-% \bibitem{cho_composite_2018}
-% N.~Cho, H.~Shin, Y.~Kim, and A.~Tsourdos, ``Composite model reference adaptive
-%   control with parameter convergence under finite excitation,'' \emph{IEEE
-%   Trans. Autom. Control}, vol.~63, no.~3, pp. 811--818, 2018.
-
-% \bibitem{nadler_finite_2008}
-% B.~Nadler, ``Finite sample approximation results for
-% principal component analysis: {{A}} matrix perturbation approach,''
-% 	\emph{Ann. Statist.}, vol.~36, no.~6, pp.
-% 	2791--2817, Dec. 2008.
-
-% \bibitem{ipsen_refined_2009}
-% I.~C.~F. Ipsen and B.~Nadler, ``Refined perturbation
-% bounds for eigenvalues of hermitian and non-hermitian matrices,''
-%   \emph{SIAM J. Matrix Anal. Appl.}, vol.~31, no.~1,
-%   pp. 40--53, 2009.
-
-% \bibitem{lavretsky_robust_2013}
-% E.~Lavretsky and K.~Wise, \emph{Robust and {{Adaptive
-% Control}}: {{With Aerospace Applications}}}, ser. Advanced {{Textbooks}} in
-% 	{{Control}} and {{Signal Processing}}. {Springer-Verlag}, {London}, 2013.
-
-% \bibitem{paternain_online_2017}
-% S.~Paternain and A.~Ribeiro, ``Online learning of feasible strategies in
-%   unknown environments,'' \emph{IEEE Trans. Autom. Control}, vol.~62, no.~6,
-%   pp. 2807--2822, 2017.
-
-% \bibitem{bauschke_convex_2011}
-% H.~H. Bauschke and P.~L. Combettes, \emph{Convex Analysis and Monotone Operator
-%   Theory in {{Hilbert}} Spaces}, ser. {{CMS}} Books in Mathematics.\hskip 1em
-%   plus 0.5em minus 0.4em\relax {New York}: {Springer}, 2011.
-
-% \bibitem{khalil_nonlinear_2002}
-% H.~K. Khalil, \emph{Nonlinear Systems}, 3rd~ed.
-% {Prentice Hall}, {Upper Saddle River, NJ}, 2002.
-
-% \bibitem{belsley_regression_1980}
-% D.~A. Belsley, E.~Kuh, and R.~E. Welsch, \emph{Regression diagnostics:
-% 	identifying influential data and sources of collinearity}, ser. Wiley series
-% 	in probability and mathematical statistics. {Wiley}, {NY}, 1980.
-
-% \bibitem{elzebda_development_1989}
-% J.~M. Elzebda, A.~H. Nayfeh, and D.~T. Mook,
-% ``Development of an analytical model of wing rock for
-% slender delta wings,'' \emph{Journal of Aircraft},
-%   vol.~26, no.~8, pp. 737--743, 1989.
-
-% \end{thebibliography}
-
 \begin{IEEEbiography}
 	[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{SKim.jpg}}]
 	{Seong-hun Kim}
-	received the B.S. degree
+	received the B.S.\@ degree
 	in Mechanical and Aerospace Engineering
 	from Seoul National University,
 	the Republic of Korea,
@@ -272,7 +821,7 @@ grant funded by the Korean government (MSIT)
 \begin{IEEEbiography}
 	[{\includegraphics[width=1in,height=1.25in,clip,keepaspectratio]{YKim.pdf}}]
 	{Youdan Kim} (M'94--SM'16)
-	received the B.S. and M.S. degrees
+	received the B.S.\@ and M.S.\@ degrees
 	in Aeronautical Engineering
 	from Seoul National University,
 	the Republic of Korea,
